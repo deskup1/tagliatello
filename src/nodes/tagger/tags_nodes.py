@@ -305,22 +305,26 @@ class FilterFilesByTagNode(BaseNode):
 
         super().__init__()
 
-        self.set_static_input("tag_key", "aesthetic")
-        self.set_static_input("tag_value", 0.5)
+        self.set_default_input("tag_key", "tag")
+        self.set_default_input("tag_value", 0)
+        self.set_default_input("filter_mode", "less")
+
 
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
             "images": StringAttributeDefinition(list=True),
-            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition()),
+            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
+            "tag_key": StringAttributeDefinition(),
+            "tag_value": FloatAttributeDefinition(),
             "filter_mode": ComboAttributeDefinition(lambda: ["greater", "less", "equal", "not equal"], allow_custom=False)
         }
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "remaining_images_tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
             "remaining_images": StringAttributeDefinition(list=True),
+            "remaining_images_tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
             "filtered_images": StringAttributeDefinition(list=True),
             "filtered_images_tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True)
         }
@@ -341,38 +345,38 @@ class FilterFilesByTagNode(BaseNode):
         if len(images) != len(tags):
             raise ValueError("Images and tags must have the same length")
 
-        tag_key = self.static_inputs["tag_key"]
-        tag_value = self.static_inputs["tag_value"]
-        filter_mode = self.static_inputs["filter_mode"]
+        tag_key = kwargs.get("tag_key", "tag")
+        tag_value = kwargs.get("tag_value", 0)
+        filter_mode = kwargs.get("filter_mode", "less")
 
         remaining_images = []
         remaining_images_tags = []
         filtered_images = []
         filtered_images_tags = []
 
-        for i, image in enumerate(images):
-            if image in tags:
-                if filter_mode == "greater" and tags[image].get(tag_key, 0) > tag_value:
-                    filtered_images.append(image)
-                    filtered_images_tags.append(tags[image])
-                elif filter_mode == "less" and tags[image].get(tag_key, 0) < tag_value:
-                    filtered_images.append(image)
-                    filtered_images_tags.append(tags[image])
-                elif filter_mode == "equal" and tags[image].get(tag_key, 0) == tag_value:
-                    filtered_images.append(image)
-                    filtered_images_tags.append(tags[image])
-                elif filter_mode == "not equal" and tags[image].get(tag_key, 0) != tag_value:
-                    filtered_images.append(image)
-                    filtered_images_tags.append(tags[image])
-                else:
-                    remaining_images.append(image)
-                    remaining_images_tags.append(tags[image])
+        for image, tag in zip(images, tags):
+            if tag_key not in tag:
+                raise ValueError(f"Tag key {tag_key} not found in tags")
+
+            if filter_mode == "greater" and tag[tag_key] > tag_value:
+                filtered_images.append(image)
+                filtered_images_tags.append(tag)
+            elif filter_mode == "less" and tag[tag_key] < tag_value:
+                filtered_images.append(image)
+                filtered_images_tags.append(tag)
+            elif filter_mode == "equal" and tag[tag_key] == tag_value:
+                filtered_images.append(image)
+                filtered_images_tags.append(tag)
+            elif filter_mode == "not equal" and tag[tag_key] != tag_value:
+                filtered_images.append(image)
+                filtered_images_tags.append(tag)
             else:
                 remaining_images.append(image)
+                remaining_images_tags.append(tag)
 
         return {
-            "remaining_images_tags": remaining_images_tags,
             "remaining_images": remaining_images,
+            "remaining_images_tags": remaining_images_tags,
             "filtered_images": filtered_images,
             "filtered_images_tags": filtered_images_tags
         }

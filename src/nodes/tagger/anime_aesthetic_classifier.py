@@ -21,14 +21,11 @@ def _predict(model: rt.InferenceSession, img: np.ndarray):
     return pred
 
 class AnimeAestheticClassifier():
-    def __init__(self, use_gpu = False):
+    def __init__(self, device = "CPUExecutionProvider"):
         super().__init__()
         self.repo_id = "skytnt/anime-aesthetic"
         anime_aesthetic_path = hf_hub_download(repo_id=self.repo_id, filename="model.onnx")
-        if use_gpu:
-            self.anime_aesthetic = rt.InferenceSession(anime_aesthetic_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-        else:
-            self.anime_aesthetic = rt.InferenceSession(anime_aesthetic_path, providers=['CPUExecutionProvider'])
+        self.anime_aesthetic = rt.InferenceSession(anime_aesthetic_path, providers=[device])
 
     def device(self):
         return self.anime_aesthetic.get_providers()[0]
@@ -43,6 +40,6 @@ class AnimeAestheticClassifier():
             pred = _predict(self.anime_aesthetic, img)
             
             if isinstance(images, list):
-                yield {"anime_aesthetic": pred}
+                yield {"aesthetic": pred}
             else:
-                return {"anime_aesthetic": pred}
+                return {"aesthetic": pred}

@@ -12,8 +12,9 @@ from .input_nodes import (
     RangeNode,
     FilePathNode,
     SplitFilePathNode,
+    Base64ImageNode,
 )
-from .folder_nodes import FilesFromFolderNode, MoveFilesToFolderNode, CopyFilesToFolderNode
+from .folder_nodes import FilesFromFolderNode, MoveFilesToFolderNode, CopyFilesToFolderNode, InputFolderNode, InputFoldersNode
 def register_nodes():
     return [CounterNode, 
             FileNode, 
@@ -28,6 +29,9 @@ def register_nodes():
             FilePathNode,
             SplitFilePathNode,
             MoveFilesToFolderNode,
-            CopyFilesToFolderNode
+            CopyFilesToFolderNode,
+            InputFoldersNode,
+            InputFolderNode,
+            Base64ImageNode
             ]
             

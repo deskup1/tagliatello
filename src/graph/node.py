@@ -351,8 +351,26 @@ class MultiFileAttributeDefinition(FileAttributeDefinition):
 
     def _on_file_select(self, sender, app_data, user_data):
         selections = app_data.get("selections", {}).items()
-        text = "\n".join(selection[1] for selection in selections)
+
+        # get files from selections
+        files = [selection[1] for selection in selections]
+        formatted_files = []
+        
+        for file_path_name in files:
+            osdir = os.getcwd()
+
+            # if file is in the same directory as the project, then remove the path,
+            file_path_name = file_path_name.replace("\\", "/")
+            osdir = osdir.replace("\\", "/")
+            if file_path_name.startswith(osdir):
+                file_path_name = file_path_name[len(osdir)+1:]
+
+            formatted_files.append(file_path_name)
+
+        text = "\n".join(formatted_files)
         dpg.set_value(user_data[0], text)
+
+        user_data[1](sender, text)
         return
     
     def _format_input(self, input):
@@ -376,7 +394,7 @@ class BoolenAttributeDefinition(AttributeDefinition):
         def on_input(sender, app_data):
             self._set_default_value(dpg_type, attribute_name, node, self._format_input(app_data))
 
-        default_value = self._get_default_value(dpg_type, attribute_name, node)
+        default_value = self._format_input(self._get_default_value(dpg_type, attribute_name, node))
         with dpg.group(horizontal=True, parent=parent) as group:
             checkbox = dpg.add_checkbox(callback=on_input, default_value=default_value)
             dpg.add_text(f"{attribute_name}:{self}")
@@ -596,6 +614,15 @@ class BaseNode:
         Args:
             None
         '''
+
+        self._on_node_ready = BaseNodeEvent()
+        '''
+        Event triggered when the node is ready to be executed.
+
+        Args:
+            None
+        '''
+
 
         self._on_run = BaseNodeEvent()
         '''

@@ -4,6 +4,104 @@ import os
 import pathlib
 import dearpygui.dearpygui as dpg
 
+class InputFolderNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("path", "")
+        self.set_default_input("create_folder", False)
+        self.__label = None
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "path": FileAttributeDefinition(directory_selector=True),
+            "create_folder": BoolenAttributeDefinition()
+            }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"path": StringAttributeDefinition()}
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Input Folder"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Input"
+    
+    def show_custom_ui(self, parent: int | str):
+        self.__label = dpg.add_text("", parent=parent)
+    
+    def init(self):
+        if self.__label is not None and dpg.does_item_exist(self.__label):
+            dpg.set_value(self.__label, "")
+    
+    def run(self, **kwargs) -> dict:
+        folder = kwargs.get("path")
+
+        if not os.path.exists(folder):
+            if kwargs.get("create_folder"):
+                os.makedirs(folder)
+            elif self.__label is not None:
+                dpg.set_value(self.__label, f"Folder '{folder}' does not exist")
+            return {"path": ""}
+        
+        if self.__label is not None:
+            dpg.set_value(self.__label, f"Folder '{folder}'")
+        
+        return {"path": folder}
+    
+class InputFoldersNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("paths", [])
+        self.set_default_input("create_folders", False)
+        self.__label = None
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"paths": StringAttributeDefinition(list=True),
+                "create_folders": BoolenAttributeDefinition()}
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"paths": StringAttributeDefinition(list=True)}
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Input Folders"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Input"
+    
+    def show_custom_ui(self, parent: int | str):
+        self.__label = dpg.add_text("", parent=parent)
+    
+    def init(self):
+        if self.__label is not None and dpg.does_item_exist(self.__label):
+            dpg.set_value(self.__label, "")
+    
+    def run(self, **kwargs) -> dict:
+        folders = kwargs.get("paths")
+        valid_folders = []
+
+        for folder in folders:
+            if not os.path.exists(folder):
+                if kwargs.get("create_folders"):
+                    os.makedirs(folder)
+                elif self.__label is not None:
+                    dpg.set_value(self.__label, f"Folder '{folder}' does not exist")
+                return {"paths": []}
+            
+            valid_folders.append(folder)
+        
+        if self.__label is not None:
+            dpg.set_value(self.__label, f"{len(valid_folders)} {'folder' if len(valid_folders) == 1 else 'folders'}")
+        
+        return {"paths": valid_folders}
+
 class FilesFromFolderNode(BaseNode):
     def __init__(self):
         super().__init__()

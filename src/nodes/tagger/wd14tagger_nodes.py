@@ -13,7 +13,7 @@ class Wd14TaggerNode(BaseNode):
         self.set_static_input("general_threshold", 0.4)
         self.set_static_input("character_threshold", 0.4)
         self.set_static_input("include_rating", True)
-        self.set_static_input("use_gpu", False)
+        self.set_static_input("device", "CPUExecutionProvider")
         self.models = None
         self.tagger = None
         self.unload_model_button = None
@@ -51,7 +51,7 @@ class Wd14TaggerNode(BaseNode):
             "general_threshold": FloatAttributeDefinition(min_value=0, max_value=1),
             "character_threshold": FloatAttributeDefinition(min_value=0, max_value=1),
             "include_rating": BoolenAttributeDefinition(),
-            "use_gpu": BoolenAttributeDefinition()
+            "device": ComboAttributeDefinition(values_callback=lambda: ["CPUExecutionProvider", "CUDAExecutionProvider"]),
         }
     
     @property
@@ -77,12 +77,21 @@ class Wd14TaggerNode(BaseNode):
     
     def init(self):
         tagger = self.static_inputs["tagger"]
-        if self.tagger is None or self.tagger.name != tagger:
-            general_threshold = self.static_inputs["general_threshold"]
-            character_threshold = self.static_inputs["character_threshold"]
-            use_gpu = self.static_inputs["use_gpu"]
-            include_rating = self.static_inputs["include_rating"]
-            self.tagger = Wd14Tagger(model_name=tagger, general_treshold=general_threshold, character_treshold=character_threshold, use_gpu=use_gpu)
+
+        if self.tagger is not None:
+            same_model = self.tagger.name == tagger
+            same_general_threshold = self.tagger.general_treshold == self.static_inputs["general_threshold"]
+            same_character_threshold = self.tagger.character_treshold == self.static_inputs["character_threshold"]
+            same_device = self.tagger.device == self.static_inputs["device"]
+            same_include_rating = self.tagger.include_rating == self.static_inputs["include_rating"]
+            if same_model and same_general_threshold and same_character_threshold and same_device and same_include_rating:
+                return
+            
+        general_threshold = self.static_inputs["general_threshold"]
+        character_threshold = self.static_inputs["character_threshold"]
+        device = self.static_inputs["device"]
+        include_rating = self.static_inputs["include_rating"]
+        self.tagger = Wd14Tagger(model_name=tagger, general_treshold=general_threshold, character_treshold=character_threshold, device=device, include_rating=include_rating)
 
     def run(self, **kwargs) -> dict[str, object]:
         return {"out": self.tagger}

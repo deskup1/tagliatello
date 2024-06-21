@@ -33,17 +33,14 @@ class IteratorNode(BaseNode):
     def run(self, **kwargs) -> dict:
         input = kwargs.get("in")
         if input is None:
-            print("Input is None")
             return {"out": BaseNode.GeneratorExit()}
         elif not isinstance(input, list):
             raise ValueError("Input is not a list")
         
         if self.last_id >= len(input):
-            print("Reached end of list")
             return {"out": BaseNode.GeneratorExit()}
         
         output = input[self.last_id]
-        print(f"Iteration {self.last_id}")
         self.last_id += 1
         return {"out": output}
 

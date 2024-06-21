@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition, ComboAttributeDefinition
 
 from .anime_aesthetic_classifier import AnimeAestheticClassifier
 
@@ -7,7 +7,7 @@ import dearpygui.dearpygui as dpg
 class AnimeAestheticClassifierNode(BaseNode):
     def __init__(self):
         super().__init__()
-        self.set_static_input("use_gpu", False)
+        self.set_static_input("device", "CPUExecutionProvider")
         self.tagger = None
         self.unload_model_button = None
 
@@ -22,7 +22,7 @@ class AnimeAestheticClassifierNode(BaseNode):
     @property
     def static_input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "use_gpu": BoolenAttributeDefinition()
+            "device": ComboAttributeDefinition(values_callback=lambda: ["CPUExecutionProvider", "CUDAExecutionProvider"])
         }
     
     @property
@@ -35,8 +35,8 @@ class AnimeAestheticClassifierNode(BaseNode):
         if self.tagger is not None:
             return
         
-        use_gpu = self.static_inputs["use_gpu"]
-        self.tagger = AnimeAestheticClassifier(use_gpu)
+        device = self.static_inputs["device"]
+        self.tagger = AnimeAestheticClassifier(device=device)
         if self.unload_model_button is not None and dpg.does_item_exist(self.unload_model_button):
             dpg.show_item(self.unload_model_button)
 

@@ -11,9 +11,16 @@ import time
 if __name__ == "__main__":
     sys.path.append("")
 
+# load from version.txt
+try:
+    with open("version.txt", "r") as f:
+        VERSION = f.read()
+except:
+    VERSION = "0.0.0"
+
 
 from src.graph import  AttributeDefinition
-from src.graph.graph import Graph, Connection, BaseNode
+from src.graph.graph import Graph, Connection, BaseNode, GraphException
 import threading
 
 import src.nodes.input as input_nodes
@@ -22,59 +29,23 @@ import src.nodes.convert as convert_nodes
 import src.nodes.tagger as tagger_nodes
 import src.nodes.dictionary as dictionary_nodes
 import src.nodes.logic as logic_nodes
+import src.nodes.llm as llm_nodes
 
 DEBUG = False
 
 dpg.create_context()
 dpg.configure_app(manual_callback_management=DEBUG)
 
-texture_registry = dpg.add_texture_registry()
 
 def exception_full_message(e):
     if not isinstance(e, Exception):
         return str(e)
+    elif isinstance(e, GraphException):
+        return f"{e}"
     try:
         raise e
     except Exception as e:
         return traceback.format_exc()
-
-def convert_cv_to_dpg(image, width, height):
-    resize_image = cv2.resize(image, (width, height))
-
-    data = np.flip(resize_image, 2)
-    data = data.ravel()
-    data = np.asfarray(data, dtype='f')
-
-    texture_data = np.true_divide(data, 255.0)
-
-    return texture_data
-
-def convert_pil_to_cv(pil_image):
-    open_cv_image = numpy.array(pil_image) 
-    # Convert RGB to BGR 
-    return open_cv_image[:, :, ::-1].copy()
-
-def add_thumbnail(pillow_image: PIL.Image.Image, id: str|int):
-    # scale to 150x150
-    pillow_image.thumbnail((150, 150))
-    # set alpha channel to 255
-    pillow_image.putalpha(255)
-    # convert to png
-    pillow_image = pillow_image.convert("RGBA")
-    # add texture
-    return add_texture(pillow_image, id)
-
-    
-def add_texture(pillow_image: PIL.Image.Image, id: str|int):
-
-    # remove texture if it already exists
-    if dpg.does_item_exist(id):
-        dpg.delete_item(id)
-        if dpg.does_alias_exist(id):
-            dpg.remove_alias(id)
-
-    texture_data = convert_cv_to_dpg(convert_pil_to_cv(pillow_image), pillow_image.width, pillow_image.height)
-    return dpg.add_raw_texture(pillow_image.width, pillow_image.height, texture_data, parent=texture_registry, tag=id)
 
 
 class GuiConnection:
@@ -145,6 +116,7 @@ class GuiNode:
         self.node._on_init += lambda: self.hide_message()
         self.node._on_init += lambda: change_theme("init")
         self.node._on_init_finished += lambda: change_theme("default")
+        self.node._on_node_ready += lambda: change_theme("default")
         self.node._on_run += lambda: change_theme("running")
         self.node._on_run_finished += lambda: change_theme("completed")
         self.node._on_error += lambda error: change_theme("error")
@@ -364,11 +336,23 @@ class GuiGraph:
         self.graph.register_nodes(tagger_nodes.register_nodes())
         self.graph.register_nodes(dictionary_nodes.register_nodes())
         self.graph.register_nodes(logic_nodes.register_nodes())
+        self.graph.register_nodes(llm_nodes.register_nodes())
 
         self.graph.on_connection_removed += self.on_connection_removed
         self.graph.on_connection_added += self.on_connection_added
         self.graph.on_node_removed += self.on_node_removed
         self.graph.on_node_added += self.on_node_added
+
+        self.graph.on_graph_started += self.on_graph_started
+        self.graph.on_graph_stopped += self.on_graph_stopped
+
+    def on_graph_started(self):
+        dpg.configure_item("graph_run_button", label="Stop")
+        pass
+
+    def on_graph_stopped(self):
+        dpg.configure_item("graph_run_button", label="Run")
+        pass
 
     def display_main_popup(self, title, text):
         try:
@@ -453,6 +437,9 @@ class GuiGraph:
                 return id
         return None
 
+    def new_graph_callback(self, sender, app_data, user_data = None):
+        self.clear_graph()
+
     def load_graph_callback(self, sender, app_data, user_data = None):
 
         self.clear_graph()
@@ -470,7 +457,11 @@ class GuiGraph:
 
     def run_callback(self, sender, app_data, user_data = None):
         try:
-            self.graph.run()
+            if self.graph.is_running():
+                self.graph.stop()
+            else:
+                self.graph.run()
+
         except Exception as e:
             self.display_main_popup("Error running graph", exception_full_message(e))
 
@@ -496,6 +487,7 @@ class GuiGraph:
         connection = self.gui_connections.get(hovered)
         if connection is not None:
             dpg.set_value("info_text", f"{connection}")
+
 
     def show(self):
         
@@ -527,16 +519,21 @@ class GuiGraph:
                         with dpg.child_window( tag="toolbar", no_scrollbar=True):
                             dpg.add_text("Right click to open menu")
                             dpg.add_separator()
-                            dpg.add_button(label="Run", width=-1, callback=self.run_callback)
+                            dpg.add_button(label="Run", width=-1, callback=self.run_callback, tag="graph_run_button")
                             dpg.add_separator()
                             dpg.add_text("", tag="info_text")
 
             # menu bar 
             with dpg.menu_bar():
                 with dpg.menu(label="File"):
+                    dpg.add_menu_item(label="New", callback=self.new_graph_callback)
                     dpg.add_menu_item(label="Save", callback=lambda: dpg.show_item("save_graph_file_dialog"))
                     dpg.add_menu_item(label="Load", callback=lambda: dpg.show_item("load_graph_file_dialog"))
                     dpg.add_menu_item(label="Exit", callback=lambda: dpg.stop_dearpygui())
+
+                with dpg.menu(label="Help"):
+                    dpg.add_menu_item(label="About", callback=lambda: dpg.show_item("About"))
+                    dpg.add_menu_item(label="Check for updates", callback=lambda: dpg.show_about())
 
             # save and load file dialogs
             with dpg.file_dialog(tag="save_graph_file_dialog", callback=self.save_graph_callback, width=700, height=400, show=False):
@@ -605,6 +602,29 @@ class GuiGraph:
                 dpg.add_text("Error Message", tag="error_popup_text")
                 dpg.add_separator()
                 dpg.add_button(label ="Close", callback=lambda: dpg.configure_item("error_popup", show=False))
+
+            center = [dpg.get_viewport_width()/2 - 200, dpg.get_viewport_height()/2 - 200]
+            with dpg.window(label="About", tag="About", no_title_bar=False, min_size=[85,85], show=True, pos=center):
+                dpg.add_text(f"Welcome to the Tagliatello Graph Editor!")
+                dpg.add_text(f"Version: {VERSION}")
+                dpg.add_text("Author: deskup@protonmail.com")
+                dpg.add_separator()
+                dpg.add_text("Tagliatello is a graph editor for creating and running data processing pipelines.")
+                dpg.add_text("It is built on top of the DearPyGui library.")
+                dpg.add_text("Please note that this is an early version and it is still under development.")
+                dpg.add_text("If you didn't encounter any bugs, it means you haven't used it enough.")
+                dpg.add_separator()
+                dpg.add_text("This is early alpha version. Expect that graphs won't be compatible with future versions.", color=(255, 0, 0))
+                dpg.add_separator()
+                dpg.add_text("Known issues and limitations:")
+                dpg.add_text("1. No undo/redo functionality")
+                dpg.add_text("2. Copy/paste not implemented")
+                dpg.add_text("3. Error messages are not always helpful and may clutter the screen")
+                dpg.add_text("4. No support for custom nodes yet")
+                dpg.add_text("5. A lot of missing nodes")
+                dpg.add_text("6. Collector and Iterator nodes don't work if are connected directly")
+                dpg.add_text("7. Nodes not being added at the mouse position")
+                dpg.add_text("8. More bugs which I didn't bother to write down")
 
         return graph_window
 
@@ -844,8 +864,12 @@ class GuiGraph:
 
 
 
-dpg.create_viewport(title='Tagiatello', width=800, height=600)
+large_icon = "icon.ico"
+small_icon = "icon.ico"
+
+dpg.create_viewport(title='Tagiatello', width=800, height=600, large_icon=large_icon, small_icon=small_icon)
 dpg.setup_dearpygui()
+
 dpg.show_viewport()
 
 node_editor = GuiGraph()
@@ -854,6 +878,7 @@ graph_window = node_editor.show()
 dpg.set_primary_window(graph_window, True)
 
 dpg.start_dearpygui()
+
 
 if DEBUG:
     while dpg.is_dearpygui_running():

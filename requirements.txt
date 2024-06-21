@@ -1,1 +1,11 @@
+numpy==1.26.4
+pandas
 filetype
+dearpygui
+opencv-python
+pillow
+pyyaml
+huggingface_hub
+onnxruntime-gpu
+transformers
+openai

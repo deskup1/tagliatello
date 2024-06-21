@@ -10,6 +10,8 @@ from ...graph import (
 )
 
 import os
+import cv2
+import base64
 
 class IntegerNode(BaseNode):
     def __init__(self):
@@ -308,3 +310,59 @@ class SplitFilePathNode(BaseNode):
             "base_name": base_name,
             "extension": extension
         }
+    
+class Base64ImageNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("path", "")
+        self.set_default_input("max_width", 512)
+        self.set_default_input("max_height", 512)
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "path": FileAttributeDefinition(allowed_extensions=["Images (*.png *.jpg *.jpeg *.bmp *.tiff *.webp *.ico){.png,.jpg,.jpeg,.bmp,.tiff,.webp,.ico}", ".*"]),
+            "max_width": IntegerAttributeDefinition(min_value=1),
+            "max_height": IntegerAttributeDefinition(min_value=1)
+            }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"image": StringAttributeDefinition()}
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Base64 Image"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Input"
+    
+    
+    def run(self, **kwargs) -> dict:
+        
+        # load image
+        path = kwargs["path"]
+        max_width = kwargs["max_width"]
+        max_height = kwargs["max_height"]
+
+        if not os.path.exists(path):
+            raise ValueError(f"File {path} does not exist")
+        
+        image = cv2.imread(path)
+        if image is None:
+            raise ValueError(f"Failed to load image {path}")
+        
+        # resize image
+        height, width = image.shape[:2]
+        if height > max_height or width > max_width:
+            scale = min(max_width / width, max_height / height)
+            image = cv2.resize(image, (0, 0), fx=scale, fy=scale)
+
+        # encode image to base64
+        _, buffer = cv2.imencode(".png", image)
+        image_base64 = base64.b64encode(buffer).decode("utf-8")
+
+        image_base64 = f"data:image/png;base64,{image_base64}"
+        return {"image": image_base64}
+
