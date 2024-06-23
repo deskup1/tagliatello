@@ -8,6 +8,7 @@ import sys
 import traceback
 import time
 
+
 if __name__ == "__main__":
     sys.path.append("")
 
@@ -30,6 +31,8 @@ import src.nodes.tagger as tagger_nodes
 import src.nodes.dictionary as dictionary_nodes
 import src.nodes.logic as logic_nodes
 import src.nodes.llm as llm_nodes
+
+import src.update as update
 
 DEBUG = False
 
@@ -488,6 +491,28 @@ class GuiGraph:
         if connection is not None:
             dpg.set_value("info_text", f"{connection}")
 
+    def check_for_updates_silent(self):
+        try:
+            version = update.get_version_to_update(VERSION)
+            print(f"New version available: {version}")
+            if version is not None:
+                self.check_for_updates_callback(None, None)
+        except Exception as e:
+            print(f"Error checking for updates: {exception_full_message(e)}")
+            pass
+
+    def check_for_updates_callback(self, sender, app_data):
+        try:
+            dpg.show_item("update_popup")
+            dpg.set_value("update_popup_text", "Checking for updates...")
+            version = update.get_version_to_update(VERSION)
+            if version is not None:
+                dpg.set_value("update_popup_text", f"New version available: {version}")
+            else:
+                dpg.set_value("update_popup_text", "No updates available.")
+        except Exception as e:
+            self.display_main_popup("Error checking for updates", exception_full_message(e))
+
 
     def show(self):
         
@@ -625,6 +650,13 @@ class GuiGraph:
                 dpg.add_text("6. Collector and Iterator nodes don't work if are connected directly")
                 dpg.add_text("7. Nodes not being added at the mouse position")
                 dpg.add_text("8. More bugs which I didn't bother to write down")
+
+        with dpg.window(label="Check for updates", tag="update_popup",  min_size=[85,85], show=False, pos=center):
+            dpg.add_text("Checking for updates...", tag="update_popup_text")
+            dpg.add_separator()
+            dpg.add_text("To update to the latest version, run 'update.ps1' script.")
+
+        node_editor.check_for_updates_silent()
 
         return graph_window
 
@@ -874,6 +906,7 @@ dpg.show_viewport()
 
 node_editor = GuiGraph()
 graph_window = node_editor.show()
+
 
 dpg.set_primary_window(graph_window, True)
 
