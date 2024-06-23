@@ -3,6 +3,7 @@ from ...graph import BaseNode, AttributeDefinition, FileAttributeDefinition, Str
 import os
 import pathlib
 import dearpygui.dearpygui as dpg
+import hashlib
 
 class InputFolderNode(BaseNode):
     def __init__(self):
@@ -39,13 +40,14 @@ class InputFolderNode(BaseNode):
     
     def run(self, **kwargs) -> dict:
         folder = kwargs.get("path")
+        create_folder = kwargs.get("create_folder")
 
         if not os.path.exists(folder):
-            if kwargs.get("create_folder"):
+            if create_folder:
                 os.makedirs(folder)
             elif self.__label is not None:
                 dpg.set_value(self.__label, f"Folder '{folder}' does not exist")
-            return {"path": ""}
+
         
         if self.__label is not None:
             dpg.set_value(self.__label, f"Folder '{folder}'")
@@ -93,7 +95,7 @@ class InputFoldersNode(BaseNode):
                     os.makedirs(folder)
                 elif self.__label is not None:
                     dpg.set_value(self.__label, f"Folder '{folder}' does not exist")
-                return {"paths": []}
+                    return {"paths": []}
             
             valid_folders.append(folder)
         
@@ -248,6 +250,9 @@ class CopyFilesToFolderNode(BaseNode):
             raise ValueError(f"Folder '{folder}' does not exist")
         
         for file in files:
+            if file == None or file == "":
+                continue
+
             if not os.path.exists(file):
                 raise ValueError(f"File '{file}' does not exist")
             
@@ -258,3 +263,56 @@ class CopyFilesToFolderNode(BaseNode):
             copied_files.append(copied_file)
         
         return {"files": copied_files}
+    
+class FindDuplicateFilesNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.default_inputs = {
+            "files": []
+        }
+
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "files": StringAttributeDefinition(list=True)
+        }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "remaining_files": StringAttributeDefinition(list=True),
+            "duplicates": StringAttributeDefinition(list=True)}
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Find Duplicate Files"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Input"
+    
+    def run(self, **kwargs) -> dict:
+        files = kwargs.get("files")
+        hashes = set()
+        duplicates = []
+        remaining_files = []
+        
+        for file in files:
+            if not os.path.exists(file):
+                raise ValueError(f"File '{file}' does not exist")
+            
+            # read files in chunks to avoid memory issues
+            with open(file, "rb") as f:
+                hasher = hashlib.md5()
+                while chunk := f.read(4096):
+                    hasher.update(chunk)
+
+                file_hash = hasher.hexdigest()
+
+            if file_hash in hashes:
+                duplicates.append(file)
+            else:
+                hashes.add(file_hash)
+                remaining_files.append(file)
+        
+        return {"remaining_files": remaining_files, "duplicates": duplicates}

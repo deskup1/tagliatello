@@ -1,0 +1,485 @@
+connections:
+  Anime Aesthetic Classifier_14.tagger -> Tag Images_13.tagger:
+    input_name: tagger
+    input_node_name: Tag Images_13
+    output_name: tagger
+    output_node_name: Anime Aesthetic Classifier_14
+  Copy Files To Folder_10.files -> Display_30.in:
+    input_name: in
+    input_node_name: Display_30
+    output_name: files
+    output_node_name: Copy Files To Folder_10
+  Copy Files To Folder_17.files -> Display_31.in:
+    input_name: in
+    input_node_name: Display_31
+    output_name: files
+    output_node_name: Copy Files To Folder_17
+  Copy Files To Folder_20.files -> Display_32.in:
+    input_name: in
+    input_node_name: Display_32
+    output_name: files
+    output_node_name: Copy Files To Folder_20
+  Copy Files To Folder_37.files -> Display_38.in:
+    input_name: in
+    input_node_name: Display_38
+    output_name: files
+    output_node_name: Copy Files To Folder_37
+  Display_29.out -> Tag Images_2.images:
+    input_name: images
+    input_node_name: Tag Images_2
+    output_name: out
+    output_node_name: Display_29
+  Files From Folder_28.files -> Find Duplicate Files_33.files:
+    input_name: files
+    input_node_name: Find Duplicate Files_33
+    output_name: files
+    output_node_name: Files From Folder_28
+  Filter Files By Tag_16.filtered_images -> Find Caret Files_15.files:
+    input_name: files
+    input_node_name: Find Caret Files_15
+    output_name: filtered_images
+    output_node_name: Filter Files By Tag_16
+  Filter Files By Tag_16.remaining_images -> Find Caret Files_19.files:
+    input_name: files
+    input_node_name: Find Caret Files_19
+    output_name: remaining_images
+    output_node_name: Filter Files By Tag_16
+  Filter Files By Tag_6.filtered_images -> Find Caret Files_7.files:
+    input_name: files
+    input_node_name: Find Caret Files_7
+    output_name: filtered_images
+    output_node_name: Filter Files By Tag_6
+  Filter Files By Tag_6.remaining_images -> Tag Images_13.images:
+    input_name: images
+    input_node_name: Tag Images_13
+    output_name: remaining_images
+    output_node_name: Filter Files By Tag_6
+  Find Caret Files_15.caret_files -> Copy Files To Folder_18.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_18
+    output_name: caret_files
+    output_node_name: Find Caret Files_15
+  Find Caret Files_15.files -> Copy Files To Folder_17.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_17
+    output_name: files
+    output_node_name: Find Caret Files_15
+  Find Caret Files_19.caret_files -> Copy Files To Folder_21.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_21
+    output_name: caret_files
+    output_node_name: Find Caret Files_19
+  Find Caret Files_19.files -> Copy Files To Folder_20.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_20
+    output_name: files
+    output_node_name: Find Caret Files_19
+  Find Caret Files_36.caret_files -> Copy Files To Folder_35.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_35
+    output_name: caret_files
+    output_node_name: Find Caret Files_36
+  Find Caret Files_36.files -> Copy Files To Folder_37.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_37
+    output_name: files
+    output_node_name: Find Caret Files_36
+  Find Caret Files_7.caret_files -> Copy Files To Folder_12.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_12
+    output_name: caret_files
+    output_node_name: Find Caret Files_7
+  Find Caret Files_7.files -> Copy Files To Folder_10.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_10
+    output_name: files
+    output_node_name: Find Caret Files_7
+  Find Duplicate Files_33.duplicates -> Find Caret Files_36.files:
+    input_name: files
+    input_node_name: Find Caret Files_36
+    output_name: duplicates
+    output_node_name: Find Duplicate Files_33
+  Find Duplicate Files_33.remaining_files -> Display_29.in:
+    input_name: in
+    input_node_name: Display_29
+    output_name: remaining_files
+    output_node_name: Find Duplicate Files_33
+  HuggingFace Aesthetic Classifier_0.tagger -> Tag Images_2.tagger:
+    input_name: tagger
+    input_node_name: Tag Images_2
+    output_name: tagger
+    output_node_name: HuggingFace Aesthetic Classifier_0
+  Input Folder_22.path -> Copy Files To Folder_10.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_10
+    output_name: path
+    output_node_name: Input Folder_22
+  Input Folder_22.path -> Copy Files To Folder_12.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_12
+    output_name: path
+    output_node_name: Input Folder_22
+  Input Folder_23.path -> Copy Files To Folder_17.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_17
+    output_name: path
+    output_node_name: Input Folder_23
+  Input Folder_23.path -> Copy Files To Folder_18.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_18
+    output_name: path
+    output_node_name: Input Folder_23
+  Input Folder_24.path -> Copy Files To Folder_20.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_20
+    output_name: path
+    output_node_name: Input Folder_24
+  Input Folder_24.path -> Copy Files To Folder_21.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_21
+    output_name: path
+    output_node_name: Input Folder_24
+  Input Folder_34.path -> Copy Files To Folder_35.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_35
+    output_name: path
+    output_node_name: Input Folder_34
+  Input Folder_34.path -> Copy Files To Folder_37.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_37
+    output_name: path
+    output_node_name: Input Folder_34
+  Tag Images_13.images -> Filter Files By Tag_16.images:
+    input_name: images
+    input_node_name: Filter Files By Tag_16
+    output_name: images
+    output_node_name: Tag Images_13
+  Tag Images_13.tags -> Filter Files By Tag_16.tags:
+    input_name: tags
+    input_node_name: Filter Files By Tag_16
+    output_name: tags
+    output_node_name: Tag Images_13
+  Tag Images_2.images -> Filter Files By Tag_6.images:
+    input_name: images
+    input_node_name: Filter Files By Tag_6
+    output_name: images
+    output_node_name: Tag Images_2
+  Tag Images_2.tags -> Filter Files By Tag_6.tags:
+    input_name: tags
+    input_node_name: Filter Files By Tag_6
+    output_name: tags
+    output_node_name: Tag Images_2
+nodes:
+  Anime Aesthetic Classifier_14:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 776
+      - 31
+    static_inputs:
+      device: CPUExecutionProvider
+    type: Anime Aesthetic Classifier
+  Copy Files To Folder_10:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 1300
+      - 598
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_12:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 1310
+      - 727
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_17:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 2094
+      - 568
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_18:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 2095
+      - 695
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_20:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 2047
+      - 169
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_21:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 2040
+      - 295
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_35:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 279
+      - 636
+    static_inputs: {}
+    type: Copy Files To Folder
+  Copy Files To Folder_37:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 279
+      - 458
+    static_inputs: {}
+    type: Copy Files To Folder
+  Display_29:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 108
+      - 169
+    static_inputs: {}
+    type: Display
+  Display_30:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1511
+      - 726
+    static_inputs: {}
+    type: Display
+  Display_31:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2307
+      - 709
+    static_inputs: {}
+    type: Display
+  Display_32:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2243
+      - 319
+    static_inputs: {}
+    type: Display
+  Display_38:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 504
+      - 598
+    static_inputs: {}
+    type: Display
+  Files From Folder_28:
+    default_inputs:
+      allowed_extensions:
+      - .jpg
+      - .jpeg
+      - .png
+      - .bmp
+      - .tiff
+      - .webp
+      path: example-workflows/example-images
+      recursive: false
+    default_outputs: {}
+    metadata:
+      position:
+      - -724
+      - 153
+    static_inputs: {}
+    type: Files From Folder
+  Filter Files By Tag_16:
+    default_inputs:
+      filter_mode: less
+      tag_key: aesthetic
+      tag_value: 0.20000000298023224
+    default_outputs: {}
+    metadata:
+      position:
+      - 1335
+      - 163
+    static_inputs: {}
+    type: Filter Files By Tag
+  Filter Files By Tag_6:
+    default_inputs:
+      filter_mode: less
+      tag_key: aesthetic
+      tag_value: 0.5
+    default_outputs: {}
+    metadata:
+      position:
+      - 623
+      - 167
+    static_inputs: {}
+    type: Filter Files By Tag
+  Find Caret Files_15:
+    default_inputs:
+      caret_file_extension: .txt
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - 1719
+      - 599
+    static_inputs: {}
+    type: Find Caret Files
+  Find Caret Files_19:
+    default_inputs:
+      caret_file_extension: .txt
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - 1699
+      - 198
+    static_inputs: {}
+    type: Find Caret Files
+  Find Caret Files_36:
+    default_inputs:
+      caret_file_extension: .txt
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - -69
+      - 451
+    static_inputs: {}
+    type: Find Caret Files
+  Find Caret Files_7:
+    default_inputs:
+      caret_file_extension: .txt
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - 959
+      - 530
+    static_inputs: {}
+    type: Find Caret Files
+  Find Duplicate Files_33:
+    default_inputs:
+      files: []
+    default_outputs: {}
+    metadata:
+      position:
+      - -284
+      - 270
+    static_inputs: {}
+    type: Find Duplicate Files
+  HuggingFace Aesthetic Classifier_0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 29
+      - 12
+    static_inputs:
+      batch_size: 64
+      device: cpu
+      model: cafeai/cafe_aesthetic
+    type: HuggingFace Aesthetic Classifier
+  Input Folder_22:
+    default_inputs:
+      create_folder: true
+      path: example-workflows/bad-images
+    default_outputs: {}
+    metadata:
+      position:
+      - 963
+      - 708
+    static_inputs: {}
+    type: Input Folder
+  Input Folder_23:
+    default_inputs:
+      create_folder: true
+      path: example-workflows/bad-images
+    default_outputs: {}
+    metadata:
+      position:
+      - 1730
+      - 774
+    static_inputs: {}
+    type: Input Folder
+  Input Folder_24:
+    default_inputs:
+      create_folder: true
+      path: example-workflows/good-images
+    default_outputs: {}
+    metadata:
+      position:
+      - 1707
+      - 40
+    static_inputs: {}
+    type: Input Folder
+  Input Folder_34:
+    default_inputs:
+      create_folder: true
+      path: example-workflows/duplicates
+    default_outputs: {}
+    metadata:
+      position:
+      - -58
+      - 641
+    static_inputs: {}
+    type: Input Folder
+  Tag Images_13:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1067
+      - 168
+    static_inputs: {}
+    type: Tag Images
+  Tag Images_2:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 322
+      - 180
+    static_inputs: {}
+    type: Tag Images

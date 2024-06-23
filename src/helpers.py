@@ -45,9 +45,9 @@ def images_thumbnail(images: list[PIL.Image.Image], size=default_thumbnail_size)
     elif len(thumbnails) == 1:
         image = thumbnails[0]
     elif len(thumbnails) == 2:
-        image = image_grid(thumbnails, (2, 1))
+        image = image_grid(thumbnails, (2, 2))
     elif len(thumbnails) == 3:
-        image = image_grid(thumbnails, (3, 1))
+        image = image_grid(thumbnails, (2, 2))
     elif len(thumbnails) == 4:
         image = image_grid(thumbnails, (2, 2))
     elif len(thumbnails) <= 6:

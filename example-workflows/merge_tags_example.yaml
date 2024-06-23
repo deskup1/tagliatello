@@ -1,0 +1,269 @@
+connections:
+  Collector_1423.out -> Save to Text Files_1424.paths:
+    input_name: paths
+    input_node_name: Save to Text Files_1424
+    output_name: out
+    output_node_name: Collector_1423
+  Convert Tags To String_7.tags_string -> Save to Text Files_1424.texts:
+    input_name: texts
+    input_node_name: Save to Text Files_1424
+    output_name: tags_string
+    output_node_name: Convert Tags To String_7
+  Copy Files To Folder_1421.files -> Iterator_1418.in:
+    input_name: in
+    input_node_name: Iterator_1418
+    output_name: files
+    output_node_name: Copy Files To Folder_1421
+  Display_1428.out -> Find Caret Files_1.files:
+    input_name: files
+    input_node_name: Find Caret Files_1
+    output_name: out
+    output_node_name: Display_1428
+  File Path_1420.path -> Collector_1423.in:
+    input_name: in
+    input_node_name: Collector_1423
+    output_name: path
+    output_node_name: File Path_1420
+  Files From Folder_0.files -> Display_1428.in:
+    input_name: in
+    input_node_name: Display_1428
+    output_name: files
+    output_node_name: Files From Folder_0
+  Find Caret Files_1.caret_files -> Load Tags From Files_3.files:
+    input_name: files
+    input_node_name: Load Tags From Files_3
+    output_name: caret_files
+    output_node_name: Find Caret Files_1
+  Find Caret Files_1.files -> Tag Images_2.images:
+    input_name: images
+    input_node_name: Tag Images_2
+    output_name: files
+    output_node_name: Find Caret Files_1
+  Input Folder_1426.path -> Copy Files To Folder_1421.folder:
+    input_name: folder
+    input_node_name: Copy Files To Folder_1421
+    output_name: path
+    output_node_name: Input Folder_1426
+  Iterator_1418.out -> Split File Path_1419.path:
+    input_name: path
+    input_node_name: Split File Path_1419
+    output_name: out
+    output_node_name: Iterator_1418
+  Join Tags_4.tags -> Convert Tags To String_7.tags:
+    input_name: tags
+    input_node_name: Convert Tags To String_7
+    output_name: tags
+    output_node_name: Join Tags_4
+  Load Tags From Files_3.tags -> Join Tags_4.tags2:
+    input_name: tags2
+    input_node_name: Join Tags_4
+    output_name: tags
+    output_node_name: Load Tags From Files_3
+  Save to Text Files_1424.paths -> Display_1425.in:
+    input_name: in
+    input_node_name: Display_1425
+    output_name: paths
+    output_node_name: Save to Text Files_1424
+  Split File Path_1419.base_name -> File Path_1420.base_name:
+    input_name: base_name
+    input_node_name: File Path_1420
+    output_name: base_name
+    output_node_name: Split File Path_1419
+  Split File Path_1419.folder -> File Path_1420.folder:
+    input_name: folder
+    input_node_name: File Path_1420
+    output_name: folder
+    output_node_name: Split File Path_1419
+  Tag Images_2.images -> Copy Files To Folder_1421.files:
+    input_name: files
+    input_node_name: Copy Files To Folder_1421
+    output_name: images
+    output_node_name: Tag Images_2
+  Tag Images_2.tags -> Join Tags_4.tags1:
+    input_name: tags1
+    input_node_name: Join Tags_4
+    output_name: tags
+    output_node_name: Tag Images_2
+  WD14 Tagger_16.out -> Tag Images_2.tagger:
+    input_name: tagger
+    input_node_name: Tag Images_2
+    output_name: out
+    output_node_name: WD14 Tagger_16
+nodes:
+  Collector_1423:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1960
+      - 151
+    static_inputs: {}
+    type: Collector
+  Convert Tags To String_7:
+    default_inputs:
+      keep_values: false
+      normalize_tags: true
+      sort_mode: value desc
+    default_outputs: {}
+    metadata:
+      position:
+      - 1526
+      - 220
+    static_inputs: {}
+    type: Convert Tags To String
+  Copy Files To Folder_1421:
+    default_inputs:
+      files: []
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 1180
+      - 0
+    static_inputs: {}
+    type: Copy Files To Folder
+  Display_1425:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2233
+      - 300
+    static_inputs: {}
+    type: Display
+  Display_1428:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 292
+      - 135
+    static_inputs: {}
+    type: Display
+  File Path_1420:
+    default_inputs:
+      base_name: ''
+      extension: txt
+      folder: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 1716
+      - 45
+    static_inputs: {}
+    type: File Path
+  Files From Folder_0:
+    default_inputs:
+      allowed_extensions:
+      - .jpeg
+      - .jpg
+      - .bmp
+      - .png
+      - .webp
+      - .tiff
+      path: example-workflows/example-images
+      recursive: false
+    default_outputs: {}
+    metadata:
+      position:
+      - -138
+      - 119
+    static_inputs: {}
+    type: Files From Folder
+  Find Caret Files_1:
+    default_inputs:
+      caret_file_extension: .txt
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - 536
+      - 198
+    static_inputs: {}
+    type: Find Caret Files
+  Input Folder_1426:
+    default_inputs:
+      create_folder: true
+      path: example-workflows/merged-tags
+    default_outputs: {}
+    metadata:
+      position:
+      - 921
+      - -161
+    static_inputs: {}
+    type: Input Folder
+  Iterator_1418:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1430
+      - 35
+    static_inputs: {}
+    type: Iterator
+  Join Tags_4:
+    default_inputs:
+      value_mode: max
+    default_outputs: {}
+    metadata:
+      position:
+      - 1207
+      - 200
+    static_inputs: {}
+    type: Join Tags
+  Load Tags From Files_3:
+    default_inputs:
+      default_value: 1
+      files: []
+      normalize_tags: true
+      on_missing_files: empty
+    default_outputs: {}
+    metadata:
+      position:
+      - 878
+      - 257
+    static_inputs: {}
+    type: Load Tags From Files
+  Save to Text Files_1424:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2053
+      - 287
+    static_inputs: {}
+    type: Save to Text Files
+  Split File Path_1419:
+    default_inputs:
+      path: ''
+    default_outputs: {}
+    metadata:
+      position:
+      - 1563
+      - 31
+    static_inputs: {}
+    type: Split File Path
+  Tag Images_2:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 893
+      - 65
+    static_inputs: {}
+    type: Tag Images
+  WD14 Tagger_16:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 556
+      - -73
+    static_inputs:
+      character_threshold: 0.6000000238418579
+      device: CUDAExecutionProvider
+      general_threshold: 0.6000000238418579
+      include_rating: true
+      tagger: SmilingWolf/wd-vit-tagger-v3
+      use_gpu: false
+    type: WD14 Tagger

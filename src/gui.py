@@ -43,7 +43,7 @@ dpg.configure_app(manual_callback_management=DEBUG)
 def exception_full_message(e):
     if not isinstance(e, Exception):
         return str(e)
-    elif isinstance(e, GraphException):
+    elif isinstance(e, GraphException) or isinstance(e, ValueError):
         return f"{e}"
     try:
         raise e
@@ -574,8 +574,7 @@ class GuiGraph:
                     self.delete_nodes_callback(sender, app_data, user_data)
 
                 dpg.add_button(label="Delete Node", callback=delete_selected)
-                dpg.add_button(label="Duplicate Node", callback=lambda: print("Duplicate Node"))
-                dpg.add_button(label="Create Node", callback=lambda: print("Create Node"))
+                dpg.add_button(label="Clone Node (todo)", callback=lambda: print("Duplicate Node"), enabled=False)
 
             # connection menu
             with dpg.window(label="Connection Menu", modal=True, tag="connection_menu", no_title_bar=False, user_data=[], show=False):
@@ -591,7 +590,7 @@ class GuiGraph:
                     self.delete_nodes_callback(sender, app_data, user_data.get("nodes", []))
                     self.delete_connections_callback(sender, app_data, user_data.get("links", []))
                 dpg.add_button(label="Delete All", callback=delete_selected)
-                dpg.add_button(label="Duplicate All", callback=lambda: print("Duplicate All"))
+                dpg.add_button(label="Clone All (todo)", callback=lambda: print("Duplicate All"), enabled=False)
 
             # graph menu
             with dpg.window(label="Create Node", modal=True, tag="graph_menu", no_title_bar=False, width=200, show=False):
@@ -629,7 +628,7 @@ class GuiGraph:
                 dpg.add_button(label ="Close", callback=lambda: dpg.configure_item("error_popup", show=False))
 
             center = [dpg.get_viewport_width()/2 - 200, dpg.get_viewport_height()/2 - 200]
-            with dpg.window(label="About", tag="About", no_title_bar=False, min_size=[85,85], show=True, pos=center):
+            with dpg.window(label="About", tag="About", no_title_bar=False, min_size=[85,85], show=False, pos=center):
                 dpg.add_text(f"Welcome to the Tagliatello Graph Editor!")
                 dpg.add_text(f"Version: {VERSION}")
                 dpg.add_text("Author: deskup@protonmail.com")

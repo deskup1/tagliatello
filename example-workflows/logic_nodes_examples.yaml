@@ -1,0 +1,168 @@
+connections:
+  Collector_0.out -> Display_11.in:
+    input_name: in
+    input_node_name: Display_11
+    output_name: out
+    output_node_name: Collector_0
+  Counter_14.out -> Loop_13.input:
+    input_name: input
+    input_node_name: Loop_13
+    output_name: out
+    output_node_name: Counter_14
+  Display_16.out -> Collector_0.in:
+    input_name: in
+    input_node_name: Collector_0
+    output_name: out
+    output_node_name: Display_16
+  Input String_4.out -> Wait_12.in:
+    input_name: in
+    input_node_name: Wait_12
+    output_name: out
+    output_node_name: Input String_4
+  Loop_13.out -> Wait_15.in:
+    input_name: in
+    input_node_name: Wait_15
+    output_name: out
+    output_node_name: Loop_13
+  Switch_0.out0 -> Display_0.in:
+    input_name: in
+    input_node_name: Display_0
+    output_name: out0
+    output_node_name: Switch_0
+  Switch_0.out1 -> Display_1.in:
+    input_name: in
+    input_node_name: Display_1
+    output_name: out1
+    output_node_name: Switch_0
+  Switch_0.out2 -> Display_2.in:
+    input_name: in
+    input_node_name: Display_2
+    output_name: out2
+    output_node_name: Switch_0
+  Wait_12.out -> Switch_0.input:
+    input_name: input
+    input_node_name: Switch_0
+    output_name: out
+    output_node_name: Wait_12
+  Wait_15.out -> Display_16.in:
+    input_name: in
+    input_node_name: Display_16
+    output_name: out
+    output_node_name: Wait_15
+nodes:
+  Collector_0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 493
+      - 582
+    static_inputs: {}
+    type: Collector
+  Counter_14:
+    default_inputs:
+      start: 0
+      step: 1
+    default_outputs: {}
+    metadata:
+      position:
+      - -395
+      - 570
+    static_inputs: {}
+    type: Counter
+  Display_0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 413
+      - 142
+    static_inputs: {}
+    type: Display
+  Display_1:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 421
+      - 260
+    static_inputs: {}
+    type: Display
+  Display_11:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 675
+      - 579
+    static_inputs: {}
+    type: Display
+  Display_16:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 342
+      - 574
+    static_inputs: {}
+    type: Display
+  Display_2:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 418
+      - 369
+    static_inputs: {}
+    type: Display
+  Input String_4:
+    default_inputs: {}
+    default_outputs:
+      out: Hello world
+    metadata:
+      position:
+      - -306
+      - 177
+    static_inputs: {}
+    type: Input String
+  Loop_13:
+    default_inputs:
+      count: 5
+    default_outputs: {}
+    metadata:
+      position:
+      - -158
+      - 573
+    static_inputs: {}
+    type: Loop
+  Switch_0:
+    default_inputs:
+      id: 2
+    default_outputs: {}
+    metadata:
+      position:
+      - 149
+      - 170
+    static_inputs:
+      count: 3
+    type: Switch
+  Wait_12:
+    default_inputs:
+      seconds: 0.49999991059303284
+    default_outputs: {}
+    metadata:
+      position:
+      - -101
+      - 175
+    static_inputs: {}
+    type: Wait
+  Wait_15:
+    default_inputs:
+      seconds: 0.49999991059303284
+    default_outputs: {}
+    metadata:
+      position:
+      - 71
+      - 572
+    static_inputs: {}
+    type: Wait

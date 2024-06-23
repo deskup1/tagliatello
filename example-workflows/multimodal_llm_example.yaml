@@ -1,0 +1,99 @@
+connections:
+  Base64 Image_4.image -> Display_645.in:
+    input_name: in
+    input_node_name: Display_645
+    output_name: image
+    output_node_name: Base64 Image_4
+  Base64 Image_4.image -> Llm Chat Message_1.image:
+    input_name: image
+    input_node_name: Llm Chat Message_1
+    output_name: image
+    output_node_name: Base64 Image_4
+  Inference LLM_2.message -> Display_3.in:
+    input_name: in
+    input_node_name: Display_3
+    output_name: message
+    output_node_name: Inference LLM_2
+  Llm Chat Message_1.message -> Inference LLM_2.message:
+    input_name: message
+    input_node_name: Inference LLM_2
+    output_name: message
+    output_node_name: Llm Chat Message_1
+  OpenAI Chat_0.model -> Inference LLM_2.model:
+    input_name: model
+    input_node_name: Inference LLM_2
+    output_name: model
+    output_node_name: OpenAI Chat_0
+nodes:
+  Base64 Image_4:
+    default_inputs:
+      max_height: 512
+      max_width: 512
+      path: example-workflows/filter-and-tag-images/bridge_a_0.jpg
+    default_outputs: {}
+    metadata:
+      position:
+      - -181
+      - 697
+    static_inputs: {}
+    type: Base64 Image
+  Display_3:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 722
+      - 550
+    static_inputs: {}
+    type: Display
+  Display_645:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 771
+      - 824
+    static_inputs: {}
+    type: Display
+  Inference LLM_2:
+    default_inputs:
+      frequency_penalty: -1.0
+      max_tokens: 200
+      message: null
+      messages: []
+      stop: []
+      temperature: -1.0
+      top_p: -1.0
+    default_outputs: {}
+    metadata:
+      position:
+      - 392
+      - 427
+    static_inputs: {}
+    type: Inference LLM
+  Llm Chat Message_1:
+    default_inputs:
+      image: example-workflows/good-images/bridge_a_0.jpg
+      message: Describe this igame
+      role: user
+    default_outputs: {}
+    metadata:
+      position:
+      - 118
+      - 582
+    static_inputs: {}
+    type: Llm Chat Message
+  OpenAI Chat_0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 91
+      - 411
+    static_inputs:
+      api_key: <DUMMY_KEY>
+      base_url: http://localhost:1234/v1
+      max_retries: 3
+      model: nakodanei/ShareGPT4V-7B_GGUF/ShareGPT4V-7B_Q5_K_M.gguf
+      timeout: 60.0
+    type: OpenAI Chat
