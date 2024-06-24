@@ -68,6 +68,7 @@ class JoinTagsNode(BaseNode):
     def __init__(self):
         super().__init__()
         self.set_default_input("value_mode", "max")
+        self.set_default_input("position", "after")
         self.set_default_input("tags1", [])
         self.set_default_input("tags2", [])
 
@@ -76,7 +77,8 @@ class JoinTagsNode(BaseNode):
         return {
             "tags1": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
             "tags2": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
-            "value_mode": ComboAttributeDefinition(lambda: ["sum", "max", "min", "average"], allow_custom=False)
+            "value_mode": ComboAttributeDefinition(lambda: ["sum", "max", "min", "average", "replace", "skip"], allow_custom=False),
+            "position": ComboAttributeDefinition(lambda: ["before", "after", "alphabetical desc", "alphabetical asc", "value desc", "value asc"])
         }
     
     @property
@@ -106,9 +108,14 @@ class JoinTagsNode(BaseNode):
         
 
             value_mode = kwargs.get("value_mode", "sum")
+            position = kwargs.get("position", "after")
     
             tags_list = []
-            for tags1, tags2 in zip(tags_list1, tags_list2):
+
+
+            tags = zip(tags_list1, tags_list2)
+
+            for tags1, tags2 in tags:
                 tags = {}
                 for tag, value in tags1.items():
                     if tag in tags2:
@@ -120,17 +127,27 @@ class JoinTagsNode(BaseNode):
                             tags[tag] = min(value, tags2[tag])
                         elif value_mode == "average":
                             tags[tag] = (value + tags2[tag]) / 2
+                        elif value_mode == "replace":
+                            tags[tag] = tags2[tag]
+                        elif value_mode == "skip":
+                            continue
                     else:
-                        tags[tag] = value
-                for tag, value in tags2.items():
-                    if tag not in tags:
-                        tags[tag] = value
+                        if position == "before":
+                            tags = {tag: value, **tags}
+                        else:
+                            tags[tag] = value
+
                 tags_list.append(tags)
+
+            asc = position.endswith("asc")
+            if position.startswith("alphabetical"):
+                tags_list = sorted(tags_list, key=lambda x: list(x.keys())[0], reverse=asc)
+            elif position.startswith("value"):
+                tags_list = sorted(tags_list, key=lambda x: list(x.values())[0], reverse=asc)
 
             return {
                 "tags": tags_list
             }
-
     
 class ConvertTagsToStringNode(BaseNode):
     def __init__(self):

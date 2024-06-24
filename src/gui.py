@@ -1,9 +1,5 @@
 import dearpygui.dearpygui as dpg
 import os
-import cv2
-import numpy as np
-import numpy
-import PIL.Image
 import sys
 import traceback
 import time
@@ -33,6 +29,9 @@ import src.nodes.logic as logic_nodes
 import src.nodes.llm as llm_nodes
 
 import src.update as update
+import src.helpers as helpers
+
+from src.settings import SETTINGS
 
 DEBUG = False
 
@@ -107,22 +106,19 @@ class GuiNode:
         self.graph: Graph = graph
         self.id = None
 
-        def change_theme(theme: str):
-            dpg.bind_item_theme(self.id, self.node_themes[theme])
-
         def on_error(error: Exception):
-            change_theme("error")
+            self.change_theme("error")
             self.show_message("Error", exception_full_message(error))
 
 
         self.node._on_error += on_error
         self.node._on_init += lambda: self.hide_message()
-        self.node._on_init += lambda: change_theme("init")
-        self.node._on_init_finished += lambda: change_theme("default")
-        self.node._on_node_ready += lambda: change_theme("default")
-        self.node._on_run += lambda: change_theme("running")
-        self.node._on_run_finished += lambda: change_theme("completed")
-        self.node._on_error += lambda error: change_theme("error")
+        self.node._on_init += lambda:  self.change_theme("init")
+        self.node._on_init_finished += lambda:  self.change_theme("default")
+        self.node._on_node_ready += lambda:  self.change_theme("default")
+        self.node._on_run += lambda:  self.change_theme("running")
+        self.node._on_run_finished += lambda:  self.change_theme("completed")
+        self.node._on_error += lambda error: self.change_theme("error")
 
         self.node._on_refresh += self.refresh_ui
 
@@ -135,6 +131,9 @@ class GuiNode:
         self.inputs_ids: dict[int, GuiNodeInput] = {}
         self.outputs_ids: dict[int, GuiNodeOutput] = {}
         self.static_inputs_ids: dict[int, GuiNodeStaticInput] = {}
+
+    def change_theme(self, theme: str):
+         dpg.bind_item_theme(self.id, self.node_themes[theme])
 
     def __create_node_theme(r, g, b):
         with dpg.theme() as node_theme:
@@ -235,6 +234,10 @@ class GuiNode:
             return
         
         dpg.hide_item(self.message_ui_id)
+
+    def clear_ui(self):
+        self.hide_message()
+        self.change_theme("default")
 
     def refresh_ui(self):
 
@@ -348,6 +351,8 @@ class GuiGraph:
 
         self.graph.on_graph_started += self.on_graph_started
         self.graph.on_graph_stopped += self.on_graph_stopped
+
+        self.graph.on_error += lambda error: self.display_main_popup("Error", exception_full_message(error))
 
     def on_graph_started(self):
         dpg.configure_item("graph_run_button", label="Stop")
@@ -492,6 +497,10 @@ class GuiGraph:
             dpg.set_value("info_text", f"{connection}")
 
     def check_for_updates_silent(self):
+        check_for_updates = SETTINGS.get("check_for_updates", True)
+        if not check_for_updates:
+            return
+
         try:
             version = update.get_version_to_update(VERSION)
             print(f"New version available: {version}")
@@ -513,7 +522,163 @@ class GuiGraph:
         except Exception as e:
             self.display_main_popup("Error checking for updates", exception_full_message(e))
 
+    def dpg_main_menu(self):
+        with dpg.menu_bar():
+            with dpg.menu(label="File"):
+                dpg.add_menu_item(label="New", callback=self.new_graph_callback)
+                dpg.add_menu_item(label="Save", callback=lambda: dpg.show_item("save_graph_file_dialog"))
+                dpg.add_menu_item(label="Load", callback=lambda: dpg.show_item("load_graph_file_dialog"))
+                dpg.add_menu_item(label="Exit", callback=lambda: dpg.stop_dearpygui())
 
+            with dpg.menu(label="Settings"):
+                dpg.add_menu_item(label="Settings", callback=lambda: dpg.show_item("settings_popup"))
+
+            with dpg.menu(label="Help"):
+                dpg.add_menu_item(label="About", callback=lambda: dpg.show_item("about_popup"))
+                dpg.add_menu_item(label="Changelog", callback=lambda: dpg.show_item("changelog_popup"))
+                dpg.add_menu_item(label="Check for updates", callback=self.check_for_updates_callback)
+
+    def dpg_load_save_file_dialogs(self):
+        with dpg.file_dialog(label="Save Graph", tag="save_graph_file_dialog", width=700, height=400, show=False, callback=self.save_graph_callback):
+            dpg.add_file_extension("Yaml files (*.yml *.yaml){.yml,.yaml}")
+
+        with dpg.file_dialog(label="Load Graph", tag="load_graph_file_dialog", width=700, height=400, show=False, callback=self.load_graph_callback):
+            dpg.add_file_extension("Yaml files (*.yml *.yaml){.yml,.yaml}")
+
+    def dpg_node_menu(self):
+        with dpg.window(label="Node menu", modal=True, tag="node_menu", no_title_bar=False, user_data=[], show=False):
+            def delete_selected(sender, app_data, user_data):
+                user_data = dpg.get_item_user_data("node_menu")
+                self.delete_nodes_callback(sender, app_data, user_data)
+
+            dpg.add_button(label="Delete Node", callback=delete_selected)
+            dpg.add_button(label="Clone Node (todo)", callback=lambda: print("Duplicate Node"), enabled=False)
+
+
+    def dpg_connection_menu(self):
+        with dpg.window(label="Connection Menu", modal=True, tag="connection_menu", no_title_bar=False, user_data=[], show=False):
+            def delete_selected(sender, app_data, user_data):
+                user_data = dpg.get_item_user_data("connection_menu")
+                self.delete_connections_callback(sender, app_data, user_data)
+            dpg.add_button(label="Delete link", callback=delete_selected)     
+
+    def dpg_selection_menu(self):
+        with dpg.window(label="Selection Menu", modal=True, tag="selection_menu", no_title_bar=False, user_data={}, show=False):
+            def delete_selected(sender, app_data, user_data):
+                user_data = dpg.get_item_user_data("selection_menu")
+                self.delete_nodes_callback(sender, app_data, user_data.get("nodes", []))
+                self.delete_connections_callback(sender, app_data, user_data.get("links", []))
+            dpg.add_button(label="Delete All", callback=delete_selected)
+            dpg.add_button(label="Clone All (todo)", callback=lambda: print("Duplicate All"), enabled=False)
+
+    def dpg_graph_menu(self):
+        with dpg.window(label="Create Node", modal=True, tag="graph_menu", no_title_bar=False, width=200, show=False):
+            
+            # search bar
+            buttons = {}
+            categories = {}
+            categories_items = {}
+
+
+            def update_search_callback(sender, app_data):
+                search = dpg.get_value(sender)
+                # hide all categories
+                for category, category_header in categories.items():
+                    dpg.hide_item(category_header)
+
+                for node_name, button in buttons.items():
+                    if search.lower() in node_name.lower():
+                        dpg.configure_item(button, show=True)
+                        node = self.available_nodes.get(node_name)
+                        category = node.category()
+                        dpg.show_item(categories[category])
+                    else:
+                        dpg.configure_item(button, show=False)
+
+            dpg.add_input_text(label="Search", width=-1, callback=update_search_callback)
+
+        
+            for node_name, node in self.available_nodes.items():
+                category = node.category()
+                if category not in categories_items:
+                    categories_items[category] = []
+                categories_items[category].append(node_name)
+            
+            for category, nodes in categories_items.items():
+                with dpg.collapsing_header(label=category, default_open=True) as category_header:
+                    categories[category] = category_header
+                    for node_name in nodes:
+                        button = dpg.add_button(label=node_name, callback=self.add_node_callback, user_data=node_name, width=-1)
+                        buttons[node_name] = button
+
+    def dpg_error_popup(self):
+        with dpg.window(label="Error", modal=True, tag="error_popup", no_title_bar=False, min_size=[85,85], show=False, no_close=True):
+            dpg.add_text("Error Message", tag="error_popup_text")
+            dpg.add_separator()
+            dpg.add_button(label ="Close", callback=lambda: dpg.configure_item("error_popup", show=False))
+
+    def dpg_about_popup(self):
+        with dpg.window(label="About", tag="about_popup", no_title_bar=False, min_size=[600,100], show=False):
+            dpg.add_text(f"        _______                  _   _           _            _   _            ")
+            dpg.add_text(f"       |__   __|                | | (_)         | |          | | | |           ")
+            dpg.add_text(f"          | |     __ _    __ _  | |  _    __ _  | |_    ___  | | | |   ___     ")
+            dpg.add_text(f"          | |    / _' |  / _' | | | | |  / _' | | __|  / _ \ | | | |  / _ \    ")
+            dpg.add_text(f"          | |   | (_| | | (_| | | | | | | (_| | | |_  |  __/ | | | | | (_) |   ")
+            dpg.add_text(f"          |_|    \__,_|  \__, | |_| |_|  \__,_|  \__|  \___| |_| |_|  \___/    ")
+            dpg.add_text(f"                          __/ |                                                ") 
+            dpg.add_text(f"                         |___/                    Version: {VERSION}")               
+            dpg.add_text(f"                                                   Author: deskup@protonmail.com")
+            dpg.add_text(f"                                                   Github: deskup1/tagliatello")
+            dpg.add_separator()
+            dpg.add_text("Tagliatello is a graph editor for creating and running data processing pipelines.")
+            dpg.add_text("It is built on top of the DearPyGui library.")
+            dpg.add_text("Please note that this is an early version and it is still under development.")
+            dpg.add_text("If you didn't encounter any bugs, it means you haven't used it enough.")
+            dpg.add_separator()
+            dpg.add_text("This is early alpha version. Expect that graphs won't be compatible with future versions.", color=(255, 0, 0))
+            dpg.add_separator()
+
+        center = [dpg.get_viewport_width()/2 - 300, dpg.get_viewport_height()/2 - 300]
+        dpg.set_item_pos("about_popup", center)
+
+    def dpg_update_popup(self):
+
+        with dpg.window(label="Check for updates", tag="update_popup",  min_size=[400,85], show=False):
+            dpg.add_text("Checking for updates...", tag="update_popup_text")
+            dpg.add_separator()
+            dpg.add_text("To update to the latest version, run 'update.ps1' script.")
+
+        center = [dpg.get_viewport_width()/2 - 200, dpg.get_viewport_height()/2 - 100]
+        dpg.set_item_pos("update_popup", center)
+
+        node_editor.check_for_updates_silent()
+
+    def dpg_changelog_popup(self):
+        show_changelog = SETTINGS.get("version", "0.0.0") != VERSION
+        SETTINGS.set("version", VERSION)
+        SETTINGS.save()
+
+        with dpg.window(label="Changelog", tag="changelog_popup", max_size=[600,3000],  min_size=[600,85], show=show_changelog) as changelog_popup:
+            update.dpg_changelog(changelog_popup, 600)
+
+        center = [dpg.get_viewport_width()/2  - 300, dpg.get_viewport_height()/2 - 300]
+        dpg.set_item_pos("changelog_popup", center)
+
+    def dpg_settings_popup(self):
+        with dpg.window(label="Settings", tag="settings_popup", no_title_bar=False, show=False, min_size=[400,100]):
+            dpg.add_text("Settings")
+            dpg.add_separator()
+            dpg.add_text("General")
+            dpg.add_checkbox(label="Check for updates on startup", default_value=SETTINGS.get("check_for_updates", True), callback=lambda _, app_data: SETTINGS.set("check_for_updates", app_data))
+            dpg.add_separator()
+            dpg.add_text("Hugging Face")
+            dpg.add_input_text(label="Cache Directory", default_value=SETTINGS.get("hf_cache_dir", ""), callback=lambda _, app_data: SETTINGS.set("hf_cache_dir", app_data))
+            
+            dpg.add_separator()
+            dpg.add_button(label="Save", callback=lambda: SETTINGS.save())
+        
+        center = [dpg.get_viewport_width()/2 - 200, dpg.get_viewport_height()/2 - 100]
+        dpg.set_item_pos("settings_popup", center)
     def show(self):
         
         with dpg.handler_registry():
@@ -541,123 +706,33 @@ class GuiGraph:
                             pass
                         
                         # toolbar
-                        with dpg.child_window( tag="toolbar", no_scrollbar=True):
+                        with dpg.child_window(tag="toolbar", no_scrollbar=True):
                             dpg.add_text("Right click to open menu")
                             dpg.add_separator()
                             dpg.add_button(label="Run", width=-1, callback=self.run_callback, tag="graph_run_button")
+                            dpg.add_button(label="Clear messages", width=-1, callback=self.clear_ui_callback)
                             dpg.add_separator()
                             dpg.add_text("", tag="info_text")
 
-            # menu bar 
-            with dpg.menu_bar():
-                with dpg.menu(label="File"):
-                    dpg.add_menu_item(label="New", callback=self.new_graph_callback)
-                    dpg.add_menu_item(label="Save", callback=lambda: dpg.show_item("save_graph_file_dialog"))
-                    dpg.add_menu_item(label="Load", callback=lambda: dpg.show_item("load_graph_file_dialog"))
-                    dpg.add_menu_item(label="Exit", callback=lambda: dpg.stop_dearpygui())
 
-                with dpg.menu(label="Help"):
-                    dpg.add_menu_item(label="About", callback=lambda: dpg.show_item("About"))
-                    dpg.add_menu_item(label="Check for updates", callback=lambda: dpg.show_about())
-
-            # save and load file dialogs
-            with dpg.file_dialog(tag="save_graph_file_dialog", callback=self.save_graph_callback, width=700, height=400, show=False):
-                dpg.add_file_extension("Yaml files (*.yml *.yaml){.yml,.yaml}")
-
-            with dpg.file_dialog(tag="load_graph_file_dialog", callback=self.load_graph_callback, width=700, height=400, show=False):
-                dpg.add_file_extension("Yaml files (*.yml *.yaml){.yml,.yaml}")
-
-            # node menu
-            with dpg.window(label="Node menu", modal=True, tag="node_menu", no_title_bar=False, user_data=[], show=False):
-                def delete_selected(sender, app_data, user_data):
-                    user_data = dpg.get_item_user_data("node_menu")
-                    self.delete_nodes_callback(sender, app_data, user_data)
-
-                dpg.add_button(label="Delete Node", callback=delete_selected)
-                dpg.add_button(label="Clone Node (todo)", callback=lambda: print("Duplicate Node"), enabled=False)
-
-            # connection menu
-            with dpg.window(label="Connection Menu", modal=True, tag="connection_menu", no_title_bar=False, user_data=[], show=False):
-                def delete_selected(sender, app_data, user_data):
-                    user_data = dpg.get_item_user_data("connection_menu")
-                    self.delete_connections_callback(sender, app_data, user_data)
-                dpg.add_button(label="Delete link", callback=delete_selected)
-
-            # selection menu
-            with dpg.window(label="Selection Menu", modal=True, tag="selection_menu", no_title_bar=False, user_data={}, show=False):
-                def delete_selected(sender, app_data, user_data):
-                    user_data = dpg.get_item_user_data("selection_menu")
-                    self.delete_nodes_callback(sender, app_data, user_data.get("nodes", []))
-                    self.delete_connections_callback(sender, app_data, user_data.get("links", []))
-                dpg.add_button(label="Delete All", callback=delete_selected)
-                dpg.add_button(label="Clone All (todo)", callback=lambda: print("Duplicate All"), enabled=False)
-
-            # graph menu
-            with dpg.window(label="Create Node", modal=True, tag="graph_menu", no_title_bar=False, width=200, show=False):
-                
-                # search bar
-                buttons = {}
-
-                def update_search_callback(sender, app_data):
-                    search = dpg.get_value(sender)
-                    for node_name, button in buttons.items():
-                        if search.lower() in node_name.lower():
-                            dpg.configure_item(button, show=True)
-                        else:
-                            dpg.configure_item(button, show=False)
-
-                dpg.add_input_text(label="Search", width=-1, callback=update_search_callback)
-
-                
-                categories = {}
-                for node_name, node in self.available_nodes.items():
-                    category = node.category()
-                    if category not in categories:
-                        categories[category] = []
-                    categories[category].append(node_name)
-                
-                for category, nodes in categories.items():
-                    with dpg.collapsing_header(label=category, default_open=True):
-                        for node_name in nodes:
-                            button = dpg.add_button(label=node_name, callback=self.add_node_callback, user_data=node_name, width=-1)
-                            buttons[node_name] = button
-
-            with dpg.window(label="Error", modal=True, tag="error_popup", no_title_bar=False, width=200, height=85, min_size=[85,85], show=False, no_close=True):
-                dpg.add_text("Error Message", tag="error_popup_text")
-                dpg.add_separator()
-                dpg.add_button(label ="Close", callback=lambda: dpg.configure_item("error_popup", show=False))
-
-            center = [dpg.get_viewport_width()/2 - 200, dpg.get_viewport_height()/2 - 200]
-            with dpg.window(label="About", tag="About", no_title_bar=False, min_size=[85,85], show=False, pos=center):
-                dpg.add_text(f"Welcome to the Tagliatello Graph Editor!")
-                dpg.add_text(f"Version: {VERSION}")
-                dpg.add_text("Author: deskup@protonmail.com")
-                dpg.add_separator()
-                dpg.add_text("Tagliatello is a graph editor for creating and running data processing pipelines.")
-                dpg.add_text("It is built on top of the DearPyGui library.")
-                dpg.add_text("Please note that this is an early version and it is still under development.")
-                dpg.add_text("If you didn't encounter any bugs, it means you haven't used it enough.")
-                dpg.add_separator()
-                dpg.add_text("This is early alpha version. Expect that graphs won't be compatible with future versions.", color=(255, 0, 0))
-                dpg.add_separator()
-                dpg.add_text("Known issues and limitations:")
-                dpg.add_text("1. No undo/redo functionality")
-                dpg.add_text("2. Copy/paste not implemented")
-                dpg.add_text("3. Error messages are not always helpful and may clutter the screen")
-                dpg.add_text("4. No support for custom nodes yet")
-                dpg.add_text("5. A lot of missing nodes")
-                dpg.add_text("6. Collector and Iterator nodes don't work if are connected directly")
-                dpg.add_text("7. Nodes not being added at the mouse position")
-                dpg.add_text("8. More bugs which I didn't bother to write down")
-
-        with dpg.window(label="Check for updates", tag="update_popup",  min_size=[85,85], show=False, pos=center):
-            dpg.add_text("Checking for updates...", tag="update_popup_text")
-            dpg.add_separator()
-            dpg.add_text("To update to the latest version, run 'update.ps1' script.")
-
-        node_editor.check_for_updates_silent()
+            self.dpg_main_menu()
+            self.dpg_load_save_file_dialogs()
+            self.dpg_node_menu()
+            self.dpg_connection_menu()
+            self.dpg_selection_menu()
+            self.dpg_graph_menu()
+            self.dpg_error_popup()
+            self.dpg_about_popup()
+            self.dpg_update_popup()
+            self.dpg_changelog_popup()
+            self.dpg_settings_popup()
 
         return graph_window
+    
+    def clear_ui_callback(self, sender, app_data, user_data):
+        # iterate over nodes
+        for node_id, gui_node in self.gui_nodes.items():
+            gui_node.clear_ui()
 
     def link_callback(self, sender, app_data, user_data):
         
@@ -898,7 +973,7 @@ class GuiGraph:
 large_icon = "icon.ico"
 small_icon = "icon.ico"
 
-dpg.create_viewport(title='Tagiatello', width=800, height=600, large_icon=large_icon, small_icon=small_icon)
+dpg.create_viewport(title='Tagiatello', large_icon=large_icon, small_icon=small_icon)
 dpg.setup_dearpygui()
 
 dpg.show_viewport()

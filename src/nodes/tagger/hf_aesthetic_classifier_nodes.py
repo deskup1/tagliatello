@@ -1,6 +1,7 @@
-from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition, ComboAttributeDefinition, IntegerAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, FileAttributeDefinition, ComboAttributeDefinition, IntegerAttributeDefinition
 
 from .hf_aesthetic_classifier import HfPipelineAestheticClassifier
+from ...settings import SETTINGS
 
 import dearpygui.dearpygui as dpg
 
@@ -10,6 +11,7 @@ class HfPipelineAestheticClassifierNode(BaseNode):
         self.set_static_input("device", "cpu")
         self.set_static_input("model", "cafeai/cafe_aesthetic")
         self.set_static_input("batch_size", 1)
+        self.set_static_input("cache_dir", SETTINGS.get("hf_cache_dir"))
         self.tagger = None
         self.unload_model_button = None
 
@@ -26,7 +28,8 @@ class HfPipelineAestheticClassifierNode(BaseNode):
         return {
             "model": ComboAttributeDefinition(values_callback=lambda: ["cafeai/cafe_aesthetic"]),
             "device": ComboAttributeDefinition(values_callback=lambda: ["cpu", "cuda:0"]),
-            "batch_size": IntegerAttributeDefinition(min_value=1, max_value=1024)
+            "batch_size": IntegerAttributeDefinition(min_value=1, max_value=1024),
+            "cache_dir": FileAttributeDefinition(directory_selector=True)
         }
     
     @property
@@ -46,14 +49,17 @@ class HfPipelineAestheticClassifierNode(BaseNode):
         model = self.static_inputs["model"]
         device = self.static_inputs["device"]
         batch_size = self.static_inputs["batch_size"]
-        
+        cache_dir = self.static_inputs["cache_dir"]
 
-        self.tagger = HfPipelineAestheticClassifier(model, device, batch_size)
+        self.tagger = HfPipelineAestheticClassifier(model_name=model, device=device, batch_size=batch_size, cache_dir=cache_dir)
         if self.unload_model_button is not None and dpg.does_item_exist(self.unload_model_button):
             dpg.show_item(self.unload_model_button)
 
     def unload_model(self):
-        self.tagger = None
+        if self.tagger is not None:
+            self.tagger.unload_model()
+            self.tagger = None
+            
         dpg.hide_item(self.unload_model_button)
     
     def show_custom_ui(self, parent: int | str):

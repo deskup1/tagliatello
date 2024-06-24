@@ -7,6 +7,8 @@ from huggingface_hub import hf_hub_download
 
 import typing
 
+from ...settings import SETTINGS
+
 def _predict(model: rt.InferenceSession, img: np.ndarray):
     img = img.astype(np.float32) / 255
     s = 768
@@ -21,14 +23,18 @@ def _predict(model: rt.InferenceSession, img: np.ndarray):
     return pred
 
 class AnimeAestheticClassifier():
-    def __init__(self, device = "CPUExecutionProvider"):
+    def __init__(self, device = "CPUExecutionProvider", cache_dir: str = SETTINGS.get("hf_cache_dir")):
         super().__init__()
         self.repo_id = "skytnt/anime-aesthetic"
-        anime_aesthetic_path = hf_hub_download(repo_id=self.repo_id, filename="model.onnx")
+        anime_aesthetic_path = hf_hub_download(repo_id=self.repo_id, filename="model.onnx", cache_dir=cache_dir)
         self.anime_aesthetic = rt.InferenceSession(anime_aesthetic_path, providers=[device])
+        self.cache_dir = cache_dir
 
     def device(self):
         return self.anime_aesthetic.get_providers()[0]
+    
+    def unload_model(self):
+        self.anime_aesthetic = None
 
     def tags(self, images: list[str] | str) -> typing.Generator[dict[str, float], None, None]:
 

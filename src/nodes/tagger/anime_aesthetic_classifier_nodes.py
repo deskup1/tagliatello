@@ -41,7 +41,9 @@ class AnimeAestheticClassifierNode(BaseNode):
             dpg.show_item(self.unload_model_button)
 
     def unload_model(self):
-        self.tagger = None
+        if self.tagger is not None:
+            self.tagger.unload_model()
+            self.tagger = None
         dpg.hide_item(self.unload_model_button)
     
     def show_custom_ui(self, parent: int | str):

@@ -1,29 +1,24 @@
 connections:
-  Collector_1423.out -> Save to Text Files_1424.paths:
+  Collector_1433.out -> Save to Text Files_1424.paths:
     input_name: paths
     input_node_name: Save to Text Files_1424
     output_name: out
-    output_node_name: Collector_1423
+    output_node_name: Collector_1433
   Convert Tags To String_7.tags_string -> Save to Text Files_1424.texts:
     input_name: texts
     input_node_name: Save to Text Files_1424
     output_name: tags_string
     output_node_name: Convert Tags To String_7
-  Copy Files To Folder_1421.files -> Iterator_1418.in:
-    input_name: in
-    input_node_name: Iterator_1418
-    output_name: files
-    output_node_name: Copy Files To Folder_1421
   Display_1428.out -> Find Caret Files_1.files:
     input_name: files
     input_node_name: Find Caret Files_1
     output_name: out
     output_node_name: Display_1428
-  File Path_1420.path -> Collector_1423.in:
+  File Path_1432.path -> Collector_1433.in:
     input_name: in
-    input_node_name: Collector_1423
+    input_node_name: Collector_1433
     output_name: path
-    output_node_name: File Path_1420
+    output_node_name: File Path_1432
   Files From Folder_0.files -> Display_1428.in:
     input_name: in
     input_node_name: Display_1428
@@ -34,21 +29,26 @@ connections:
     input_node_name: Load Tags From Files_3
     output_name: caret_files
     output_node_name: Find Caret Files_1
+  Find Caret Files_1.files -> Iterator_1430.in:
+    input_name: in
+    input_node_name: Iterator_1430
+    output_name: files
+    output_node_name: Find Caret Files_1
   Find Caret Files_1.files -> Tag Images_2.images:
     input_name: images
     input_node_name: Tag Images_2
     output_name: files
     output_node_name: Find Caret Files_1
-  Input Folder_1426.path -> Copy Files To Folder_1421.folder:
+  Input Folder_1434.path -> File Path_1432.folder:
     input_name: folder
-    input_node_name: Copy Files To Folder_1421
+    input_node_name: File Path_1432
     output_name: path
-    output_node_name: Input Folder_1426
-  Iterator_1418.out -> Split File Path_1419.path:
+    output_node_name: Input Folder_1434
+  Iterator_1430.out -> Split File Path_1431.path:
     input_name: path
-    input_node_name: Split File Path_1419
+    input_node_name: Split File Path_1431
     output_name: out
-    output_node_name: Iterator_1418
+    output_node_name: Iterator_1430
   Join Tags_4.tags -> Convert Tags To String_7.tags:
     input_name: tags
     input_node_name: Convert Tags To String_7
@@ -64,21 +64,11 @@ connections:
     input_node_name: Display_1425
     output_name: paths
     output_node_name: Save to Text Files_1424
-  Split File Path_1419.base_name -> File Path_1420.base_name:
+  Split File Path_1431.base_name -> File Path_1432.base_name:
     input_name: base_name
-    input_node_name: File Path_1420
+    input_node_name: File Path_1432
     output_name: base_name
-    output_node_name: Split File Path_1419
-  Split File Path_1419.folder -> File Path_1420.folder:
-    input_name: folder
-    input_node_name: File Path_1420
-    output_name: folder
-    output_node_name: Split File Path_1419
-  Tag Images_2.images -> Copy Files To Folder_1421.files:
-    input_name: files
-    input_node_name: Copy Files To Folder_1421
-    output_name: images
-    output_node_name: Tag Images_2
+    output_node_name: Split File Path_1431
   Tag Images_2.tags -> Join Tags_4.tags1:
     input_name: tags1
     input_node_name: Join Tags_4
@@ -90,13 +80,13 @@ connections:
     output_name: out
     output_node_name: WD14 Tagger_16
 nodes:
-  Collector_1423:
+  Collector_1433:
     default_inputs: {}
     default_outputs: {}
     metadata:
       position:
-      - 1960
-      - 151
+      - 1547
+      - 488
     static_inputs: {}
     type: Collector
   Convert Tags To String_7:
@@ -107,28 +97,17 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1526
-      - 220
+      - 1502
+      - 189
     static_inputs: {}
     type: Convert Tags To String
-  Copy Files To Folder_1421:
-    default_inputs:
-      files: []
-      folder: ''
-    default_outputs: {}
-    metadata:
-      position:
-      - 1180
-      - 0
-    static_inputs: {}
-    type: Copy Files To Folder
   Display_1425:
     default_inputs: {}
     default_outputs: {}
     metadata:
       position:
-      - 2233
-      - 300
+      - 2023
+      - 406
     static_inputs: {}
     type: Display
   Display_1428:
@@ -140,16 +119,16 @@ nodes:
       - 135
     static_inputs: {}
     type: Display
-  File Path_1420:
+  File Path_1432:
     default_inputs:
       base_name: ''
-      extension: txt
+      extension: .txt
       folder: ''
     default_outputs: {}
     metadata:
       position:
-      - 1716
-      - 45
+      - 1265
+      - 470
     static_inputs: {}
     type: File Path
   Files From Folder_0:
@@ -177,38 +156,41 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 536
-      - 198
+      - 519
+      - 248
     static_inputs: {}
     type: Find Caret Files
-  Input Folder_1426:
+  Input Folder_1434:
     default_inputs:
       create_folder: true
       path: example-workflows/merged-tags
     default_outputs: {}
     metadata:
       position:
-      - 921
-      - -161
+      - 992
+      - 639
     static_inputs: {}
     type: Input Folder
-  Iterator_1418:
+  Iterator_1430:
     default_inputs: {}
     default_outputs: {}
     metadata:
       position:
-      - 1430
-      - 35
+      - 886
+      - 465
     static_inputs: {}
     type: Iterator
   Join Tags_4:
     default_inputs:
-      value_mode: max
+      position: after
+      tags1: []
+      tags2: []
+      value_mode: skip
     default_outputs: {}
     metadata:
       position:
       - 1207
-      - 200
+      - 173
     static_inputs: {}
     type: Join Tags
   Load Tags From Files_3:
@@ -220,27 +202,28 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 878
-      - 257
+      - 883
+      - 256
     static_inputs: {}
     type: Load Tags From Files
   Save to Text Files_1424:
-    default_inputs: {}
+    default_inputs:
+      mode: overwrite
     default_outputs: {}
     metadata:
       position:
-      - 2053
-      - 287
+      - 1790
+      - 208
     static_inputs: {}
     type: Save to Text Files
-  Split File Path_1419:
+  Split File Path_1431:
     default_inputs:
       path: ''
     default_outputs: {}
     metadata:
       position:
-      - 1563
-      - 31
+      - 1049
+      - 467
     static_inputs: {}
     type: Split File Path
   Tag Images_2:
@@ -260,6 +243,7 @@ nodes:
       - 556
       - -73
     static_inputs:
+      cache_dir: hf_cache
       character_threshold: 0.6000000238418579
       device: CUDAExecutionProvider
       general_threshold: 0.6000000238418579

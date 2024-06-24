@@ -1,5 +1,5 @@
-from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, StringAttributeDefinition
-
+from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, FileAttributeDefinition
+from ...settings import SETTINGS
 from .wd14tagger import Wd14Tagger
 
 import requests
@@ -14,6 +14,7 @@ class Wd14TaggerNode(BaseNode):
         self.set_static_input("character_threshold", 0.4)
         self.set_static_input("include_rating", True)
         self.set_static_input("device", "CPUExecutionProvider")
+        self.set_static_input("cache_dir", SETTINGS.get("hf_cache_dir"))
         self.models = None
         self.tagger = None
         self.unload_model_button = None
@@ -52,6 +53,7 @@ class Wd14TaggerNode(BaseNode):
             "character_threshold": FloatAttributeDefinition(min_value=0, max_value=1),
             "include_rating": BoolenAttributeDefinition(),
             "device": ComboAttributeDefinition(values_callback=lambda: ["CPUExecutionProvider", "CUDAExecutionProvider"]),
+            "cache_dir": FileAttributeDefinition(directory_selector=True)
         }
     
     @property
@@ -61,7 +63,9 @@ class Wd14TaggerNode(BaseNode):
         }
     
     def unload_model(self):
-        self.tagger = None
+        if self.tagger is not None:
+            self.tagger.unload_model()
+            self.tagger = None
         dpg.hide_item(self.unload_model_button)
     
     def show_custom_ui(self, parent: int | str) -> int | str | None:
@@ -91,7 +95,14 @@ class Wd14TaggerNode(BaseNode):
         character_threshold = self.static_inputs["character_threshold"]
         device = self.static_inputs["device"]
         include_rating = self.static_inputs["include_rating"]
-        self.tagger = Wd14Tagger(model_name=tagger, general_treshold=general_threshold, character_treshold=character_threshold, device=device, include_rating=include_rating)
+        cache_dir = self.static_inputs["cache_dir"]
+        self.tagger = Wd14Tagger(
+            model_name=tagger, 
+            general_treshold=general_threshold, 
+            character_treshold=character_threshold, 
+            device=device, 
+            include_rating=include_rating,
+            cache_dir=cache_dir)
 
     def run(self, **kwargs) -> dict[str, object]:
         return {"out": self.tagger}

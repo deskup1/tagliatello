@@ -1,7 +1,8 @@
 from ...graph import BaseNode, AttributeKind, AttributeDefinition, AnyAttributeDefinition, IntegerAttributeDefinition, MultipleAttributeDefinition, BoolenAttributeDefinition, FloatAttributeDefinition, StringAttributeDefinition
 import dearpygui.dearpygui as dpg
+from ..progress_node import ProgressNode
 
-class IteratorNode(BaseNode):
+class IteratorNode(ProgressNode):
 
     def __init__(self):
         super().__init__()
@@ -9,6 +10,7 @@ class IteratorNode(BaseNode):
 
     def init(self):
         self.last_id = 0
+        super().init()
         
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
@@ -33,14 +35,18 @@ class IteratorNode(BaseNode):
     def run(self, **kwargs) -> dict:
         input = kwargs.get("in")
         if input is None:
+            self.set_progress(0,0)
             return {"out": BaseNode.GeneratorExit()}
         elif not isinstance(input, list):
+            self.set_progress(-1, -1)
             raise ValueError("Input is not a list")
         
         if self.last_id >= len(input):
+            self.set_progress(len(input), len(input))
             return {"out": BaseNode.GeneratorExit()}
         
         output = input[self.last_id]
+        self.set_progress(self.last_id, len(input))
         self.last_id += 1
         return {"out": output}
 
@@ -176,7 +182,7 @@ class CollectorNode(BaseNode):
             self.collected.append(input)
             return {"out": BaseNode.GeneratorContinue()}
 
-class LoopNode(BaseNode):
+class LoopNode(ProgressNode):
     def __init__(self):
         super().__init__()
         self.set_default_input("count", 1)
@@ -203,13 +209,16 @@ class LoopNode(BaseNode):
     
     def init(self):
         self.last_id = 0
+        super().init()
     
     def run(self, **kwargs) -> dict:
         count = kwargs.get("count", 1)
         input = kwargs.get("input")
 
         if self.last_id >= count:
+            self.set_progress(count, count)
             return {"out": BaseNode.GeneratorExit()}
         else:
+            self.set_progress(self.last_id, count)
             self.last_id += 1
             return {"out": input}

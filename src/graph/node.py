@@ -816,9 +816,9 @@ class BaseNode:
             data (dict): dictionary with node data loaded from a file
         '''
 
-        self.static_inputs = data.get("static_inputs", {})
-        self.default_inputs = data.get("default_inputs", {})
-        self.default_outputs = data.get("default_outputs", {})
+        self.static_inputs = {**self.static_inputs, **data.get("static_inputs", {})}
+        self.default_inputs = {**self.default_inputs, **data.get("default_inputs", {})}
+        self.default_outputs = {**self.default_outputs, **data.get("default_outputs", {})}
         self.metadata = data.get("metadata", {})
     
     @classmethod

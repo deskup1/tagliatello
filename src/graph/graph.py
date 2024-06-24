@@ -4,10 +4,10 @@ if __name__ == "__main__":
 
 from .node import BaseNode, AttributeKind, BaseNodeEvent
 
-import queue
+
 import yaml
 import threading
-import time
+import os
 
 class GraphException(Exception):
     def __init__(self, message: str):
@@ -51,6 +51,8 @@ class Graph:
 
         self.on_graph_started = BaseNodeEvent()
         self.on_graph_stopped = BaseNodeEvent()
+
+        self.on_error = BaseNodeEvent()
 
 
         self.__counter = 0
@@ -244,6 +246,8 @@ class Graph:
 
 
     def save_to_file(self, file_path: str):
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
         data = {
             "nodes": {},
             "connections": {}
@@ -258,7 +262,9 @@ class Graph:
         with open(file_path, "w") as file:
             yaml.dump(data, file)
 
+
     def load_from_file(self, file_path: str):
+
         with open(file_path, "r") as file:
             data = yaml.load(file, Loader=yaml.FullLoader)
 
@@ -572,6 +578,7 @@ class Graph:
             
             self.stop()
         except Exception as e:
+            self.on_error.trigger(e)
             self.stop()
             raise e
 

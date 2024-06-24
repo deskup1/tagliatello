@@ -418,6 +418,7 @@ nodes:
       - 12
     static_inputs:
       batch_size: 64
+      cache_dir: hf_cache
       device: cpu
       model: cafeai/cafe_aesthetic
     type: HuggingFace Aesthetic Classifier

@@ -10,6 +10,8 @@ import io
 import pandas as pd
 from typing import Generator
 
+from ...settings import SETTINGS
+
 
 def _make_square(img, target_size):
     old_size = img.shape[:2]
@@ -36,8 +38,13 @@ def _smart_resize(img, size):
         img = cv2.resize(img, (size, size), interpolation=cv2.INTER_CUBIC)
     return img
 
-def _load_model(model_repo: str, model_filename: str, device = "CPUExecutionProvider") -> rt.InferenceSession:
-    path = huggingface_hub.hf_hub_download(repo_id=model_repo, filename=model_filename)
+def _load_model(model_repo: str, 
+                model_filename: str, 
+                device = "CPUExecutionProvider", 
+                cache_dir: str = SETTINGS.get("hf_cache_dir")
+                ) -> rt.InferenceSession:
+    
+    path = huggingface_hub.hf_hub_download(repo_id=model_repo, filename=model_filename, cache_dir=cache_dir)
     return rt.InferenceSession(path, providers=[device])
 
 def _load_labels(model_repo: str, label_filename: str) -> list[str]:
@@ -110,13 +117,21 @@ def _predict(
     return (a, c, rating, character_res, general_res)
 
 class Wd14Tagger:
-    def __init__(self, model_name: str = 'SmilingWolf/wd-vit-tagger-v3', general_treshold = 0.1, character_treshold = 0.1, device = "CPUExecutionProvider", include_rating = True):
+    def __init__(self, 
+                 model_name: str = 'SmilingWolf/wd-vit-tagger-v3', 
+                 general_treshold = 0.1, 
+                 character_treshold = 0.1, 
+                 device = "CPUExecutionProvider", 
+                 include_rating = True,
+                 cache_dir = SETTINGS.get("hf_cache_dir")
+                 ):
         self.labels = _load_labels(model_name, "selected_tags.csv")
-        self.model = _load_model(model_name, "model.onnx", device)
+        self.model = _load_model(model_name, "model.onnx", device, cache_dir)
         self.name = model_name
         self.general_treshold = general_treshold
         self.character_treshold = character_treshold
         self.include_rating = include_rating
+        self.cache_dir = cache_dir
 
     def __convert_image(self, image):
         if isinstance(image, str):
@@ -133,6 +148,9 @@ class Wd14Tagger:
     
     def device(self):
         return self.model.get_providers()[0]
+    
+    def unload_model(self):
+        self.model = None
     
     def __find_highest_rating(self, ratings: dict[str, float]) -> dict[str, float]:
         if len(ratings) == 0:

@@ -2,13 +2,20 @@ from ...graph import BaseNode, AttributeDefinition, FileAttributeDefinition, Mul
 import os
 from PIL import Image
 
+from ..progress_node import ProgressNode
+
 class SaveToTextFileNode(BaseNode):
     def __init__(self):
         super().__init__()
+        self.set_default_input("mode", "overwrite")
 
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"text": StringAttributeDefinition(), "path": FileAttributeDefinition()}
+        return {
+            "text": StringAttributeDefinition(), 
+            "path": FileAttributeDefinition(),
+            "mode": ComboAttributeDefinition(values_callback=lambda: ["overwrite", "append", "error if exists","skip if exists"])
+            }
 
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
@@ -25,17 +32,34 @@ class SaveToTextFileNode(BaseNode):
     def run(self, **kwargs) -> dict:
         text = kwargs["text"]
         path = kwargs["path"]
-        with open(path, "w") as f:
-            f.write(text)
-        return {}
+        mode = kwargs.get("mode", "overwrite")
 
-class SaveToTextFilesNode(BaseNode):
+        if mode == "error if exists" and os.path.exists(path):
+            raise ValueError("File already exists")
+        
+        if mode == "skip if exists" and os.path.exists(path):
+            return {"path": path}
+        
+        if mode == "append" and os.path.exists(path):
+            with open(path, "a") as f:
+                f.write(text)
+        else:
+            with open(path, "w") as f:
+                f.write(text)
+        return {"path": path}
+
+class SaveToTextFilesNode(ProgressNode):
     def __init__(self):
         super().__init__()
+        self.set_default_input("mode", "overwrite")
 
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"texts": StringAttributeDefinition(list=True), "paths": MultiFileAttributeDefinition()}
+        return {
+            "texts": StringAttributeDefinition(list=True), 
+            "paths": MultiFileAttributeDefinition(),
+            "mode": ComboAttributeDefinition(values_callback=lambda: ["overwrite", "append", "error if exists","skip if exists"])
+            }
 
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
@@ -52,14 +76,31 @@ class SaveToTextFilesNode(BaseNode):
     def run(self, **kwargs) -> dict:
         texts = kwargs["texts"]
         paths = kwargs["paths"]
+        mode = kwargs.get("mode", "overwrite")
 
         if len(texts) != len(paths):
             raise ValueError("Texts and paths lists must have the same length")
 
+        remaining_paths = []
+
         for i in range(len(texts)):
-            with open(paths[i], "w") as f:
-                f.write(texts[i])
-        return {"paths": paths}
+
+            self.set_progress(i, len(texts))
+
+            if mode == "error if exists" and os.path.exists(paths[i]):
+                raise ValueError("File already exists")
+            elif mode == "skip if exists" and os.path.exists(paths[i]):
+                continue
+            elif mode == "append" and os.path.exists(paths[i]):
+                with open(paths[i], "a") as f:
+                    f.write(texts[i])
+            else:
+                with open(paths[i], "w") as f:
+                    f.write(texts[i])
+            remaining_paths.append(paths[i])
+
+        self.set_progress(len(texts), len(texts))
+        return {"paths": remaining_paths}
    
 
 class SaveToImageFileNode(BaseNode):
@@ -118,7 +159,7 @@ class MoveFileNode(BaseNode):
         os.rename(source, destination)
         return {"destination": destination}
     
-class MoveFilesNode(BaseNode):
+class MoveFilesNode(ProgressNode):
     def __init__(self):
         super().__init__()
 
@@ -138,6 +179,7 @@ class MoveFilesNode(BaseNode):
     def category(cls) -> str:
         return "File"
 
+
     def run(self, **kwargs) -> dict:
         source = kwargs["source"]
         destination = kwargs["destination"]
@@ -146,7 +188,11 @@ class MoveFilesNode(BaseNode):
             raise ValueError("Source and destination lists must have the same length")
 
         for i in range(len(source)):
+            self.set_progress(0, len(source))
             os.rename(source[i], destination[i])
+
+        self.set_progress(len(source), len(source))
+
         return {"destination": destination}
     
 class CopyFileNode(BaseNode):
@@ -180,7 +226,7 @@ class CopyFileNode(BaseNode):
             f.write(data)
         return {"destination": destination}
 
-class CopyFilesNode(BaseNode):
+class CopyFilesNode(ProgressNode):
     def __init__(self):
         super().__init__()
 
@@ -199,16 +245,27 @@ class CopyFilesNode(BaseNode):
     @classmethod
     def category(cls) -> str:
         return "File"
+    
 
     def run(self, **kwargs) -> dict:
         source = kwargs["source"]
         destination = kwargs["destination"]
 
+        files = []
+
         if len(source) != len(destination):
             raise ValueError("Source and destination lists must have the same length")
 
         for i in range(len(source)):
+            self.set_progress(0, len(source))
             with open(source[i], "rb") as f:
                 data = f.read()
             with open(destination[i], "wb") as f:
                 f.write(data)
+
+            files.append(destination[i])
+
+        self.set_progress(len(source), len(source))
+
+        return {"destination": files}
+

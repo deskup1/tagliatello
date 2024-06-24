@@ -184,15 +184,20 @@ class DisplayNode(BaseNode):
         input = kwargs.get("in")
 
         if isinstance(input, str):
+            
             if os.path.isfile(input):
+
                 text_file_extensions = [
                     ".txt", ".log", ".md", ".py", ".json", ".xml", ".csv", ".tsv", ".html", 
                     ".css", ".js", ".c", ".cpp", ".h", ".hpp", ".java", ".php", ".sh",
                     ".bat", ".ps1", ".yaml", ".yml", ".ini", ".cfg", ".conf", ".config"]
+                
                 if os.path.splitext(input)[1] in text_file_extensions:
                     self._show_txt_file(input)
+
                 elif filetype.is_image(input):
                     self._show_image(input)
+
                 else:
                     self._show_file(input)
 
@@ -206,7 +211,9 @@ class DisplayNode(BaseNode):
                 self.__show_text(input)
         elif isinstance(input, list):
             # if all are strings
+
             if all(isinstance(i, str) for i in input):
+
                 # if all starts with data:image
                 if all(i.startswith("data:image") for i in input):
                     self._show_base64_images(input)
@@ -216,9 +223,11 @@ class DisplayNode(BaseNode):
                     image_extensions = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp", ".ico"]
                     if all(os.path.splitext(i)[1] in image_extensions for i in input):
                         self._show_images(input)
+                    else:
+                        self.__show_text(input)
                         
                 else:
-                    self._show_images(input)
+                    self.__show_text(input)
             else:
                 self.__show_text(input)
         else:
