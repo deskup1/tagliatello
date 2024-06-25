@@ -8,6 +8,7 @@ from .node import BaseNode, AttributeKind, BaseNodeEvent
 import yaml
 import threading
 import os
+import importlib
 
 class GraphException(Exception):
     def __init__(self, message: str):
@@ -74,6 +75,38 @@ class Graph:
         for node in nodes:
             self.register_node(node)
 
+    def register_modules(self, root_directory: str, module_prefix: str = None):
+
+        if module_prefix is None:
+            module_prefix = root_directory.replace("/", ".").replace("\\", ".")
+
+        # iterate over all folders in root_directory
+        for directory in os.listdir(root_directory):
+            if not os.path.isdir(os.path.join(root_directory, directory)):
+                continue
+
+            if not os.path.exists(os.path.join(root_directory, directory, "__init__.py")):
+                continue
+
+            if directory.startswith("__"):
+                continue
+
+            module_name = f"{module_prefix}.{directory}"
+            spec = importlib.util.spec_from_file_location(module_name, os.path.join(root_directory, directory, "__init__.py"))
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            if hasattr(module, "register_nodes"):
+                self.register_nodes(module.register_nodes())
+
+        # for root, dirs, files in os.walk(root_directory):
+        #     module_name = f"{module_prefix}.{os.path.basename(root)}"
+        #     print(root, dirs, files, module_name)
+        #     spec = importlib.util.spec_from_file_location(module_name, os.path.join(root, "__init__.py"))
+        #     module = importlib.util.module_from_spec(spec)
+        #     spec.loader.exec_module(module)
+        #     if hasattr(module, "register_nodes"):
+        #         self.register_nodes(module.register_nodes())
+            
     def register_node(self, node_cls):
         self.available_nodes[node_cls.name()] = node_cls
 

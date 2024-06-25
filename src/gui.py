@@ -336,13 +336,8 @@ class GuiGraph:
         self.gui_nodes: dict[int, GuiNode] = {}
         self.gui_connections: dict[int, GuiConnection] = {}
 
-        self.graph.register_nodes(input_nodes.register_nodes())
-        self.graph.register_nodes(output_nodes.register_nodes())
-        self.graph.register_nodes(convert_nodes.register_nodes())
-        self.graph.register_nodes(tagger_nodes.register_nodes())
-        self.graph.register_nodes(dictionary_nodes.register_nodes())
-        self.graph.register_nodes(logic_nodes.register_nodes())
-        self.graph.register_nodes(llm_nodes.register_nodes())
+        self.graph.register_modules("src/nodes")
+        self.graph.register_modules("custom_nodes")
 
         self.graph.on_connection_removed += self.on_connection_removed
         self.graph.on_connection_added += self.on_connection_added
