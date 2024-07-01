@@ -4,11 +4,26 @@ connections:
     input_node_name: Display_11
     output_name: out
     output_node_name: Collector_0
+  Connector_22.out -> Counter_14.step:
+    input_name: step
+    input_node_name: Counter_14
+    output_name: out
+    output_node_name: Connector_22
   Counter_14.out -> Loop_13.input:
     input_name: input
     input_node_name: Loop_13
     output_name: out
     output_node_name: Counter_14
+  Display_0.out -> Connector_22.input0:
+    input_name: input0
+    input_node_name: Connector_22
+    output_name: out
+    output_node_name: Display_0
+  Display_1.out -> Connector_22.input1:
+    input_name: input1
+    input_node_name: Connector_22
+    output_name: out
+    output_node_name: Display_1
   Display_11.out -> Iterator_17.in:
     input_name: in
     input_node_name: Iterator_17
@@ -19,9 +34,9 @@ connections:
     input_node_name: Collector_0
     output_name: out
     output_node_name: Display_16
-  Display_2.out -> Counter_14.step:
-    input_name: step
-    input_node_name: Counter_14
+  Display_2.out -> Connector_22.input2:
+    input_name: input2
+    input_node_name: Connector_22
     output_name: out
     output_node_name: Display_2
   Input Integer_19.out -> Wait_12.in:
@@ -79,6 +94,16 @@ nodes:
       - 778
     static_inputs: {}
     type: Collector
+  Connector_22:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 547
+      - 310
+    static_inputs:
+      count: 3
+    type: Connector
   Counter_14:
     default_inputs:
       start: 0
@@ -86,8 +111,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - -345
-      - 565
+      - -353
+      - 562
     static_inputs: {}
     type: Counter
   Display_0:
@@ -95,8 +120,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 413
-      - 142
+      - 392
+      - 146
     static_inputs: {}
     type: Display
   Display_1:
@@ -104,8 +129,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 421
-      - 260
+      - 390
+      - 253
     static_inputs: {}
     type: Display
   Display_11:
@@ -122,8 +147,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 427
-      - 580
+      - 453
+      - 584
     static_inputs: {}
     type: Display
   Display_2:
@@ -131,8 +156,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 418
-      - 369
+      - 391
+      - 373
     static_inputs: {}
     type: Display
   Display_21:
@@ -150,8 +175,8 @@ nodes:
       out: 5
     metadata:
       position:
-      - -311
-      - 171
+      - -387
+      - 150
     static_inputs: {}
     type: Input Integer
   Iterator_17:
@@ -169,8 +194,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - -103
-      - 567
+      - -100
+      - 569
     static_inputs: {}
     type: Loop
   Switch_0:
@@ -179,8 +204,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 149
-      - 170
+      - 146
+      - 158
     static_inputs:
       count: 3
     type: Switch
@@ -190,8 +215,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - -101
-      - 175
+      - -138
+      - 160
     static_inputs: {}
     type: Wait
   Wait_15:
@@ -200,8 +225,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 131
-      - 575
+      - 154
+      - 572
     static_inputs: {}
     type: Wait
   Wait_20:
@@ -210,7 +235,7 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 198
-      - 787
+      - 165
+      - 782
     static_inputs: {}
     type: Wait

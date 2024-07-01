@@ -3,7 +3,8 @@ import os
 import sys
 import traceback
 import time
-
+import textwrap
+import random
 
 if __name__ == "__main__":
     sys.path.append("")
@@ -16,20 +17,11 @@ except:
     VERSION = "0.0.0"
 
 
-from src.graph import  AttributeDefinition
+from src.graph import  AttributeDefinition, DPG_DEFAULT_INPUT_WIDTH
 from src.graph.graph import Graph, Connection, BaseNode, GraphException
 import threading
 
-import src.nodes.input as input_nodes
-import src.nodes.output as output_nodes
-import src.nodes.convert as convert_nodes
-import src.nodes.tagger as tagger_nodes
-import src.nodes.dictionary as dictionary_nodes
-import src.nodes.logic as logic_nodes
-import src.nodes.llm as llm_nodes
-
 import src.update as update
-import src.helpers as helpers
 
 from src.settings import SETTINGS
 
@@ -108,24 +100,28 @@ class GuiNode:
 
         def on_error(error: Exception):
             self.change_theme("error")
-            self.show_message("Error", exception_full_message(error))
+            self.show_error_message(str(error), exception_full_message(error))
 
+        def on_warning(warning: str):
+            self.change_theme("warning")
+            title = warning.split("\n")[0]
+            self.show_warning_message(title, warning)
 
         self.node._on_error += on_error
-        self.node._on_init += lambda: self.hide_message()
+        self.node._on_init += lambda: self.clear_ui()
         self.node._on_init += lambda:  self.change_theme("init")
         self.node._on_init_finished += lambda:  self.change_theme("default")
         self.node._on_node_ready += lambda:  self.change_theme("default")
         self.node._on_run += lambda:  self.change_theme("running")
         self.node._on_run_finished += lambda:  self.change_theme("completed")
         self.node._on_error += lambda error: self.change_theme("error")
+        # self.node._on_warning += on_warning
 
         self.node._on_refresh += self.refresh_ui
 
         # message ui
-        self.message_ui_id = None
-        self.message_ui_title_id = None
-        self.message_ui_text_id = None
+        self.error_button = None
+        self.warning_button = None
 
         # inputs
         self.inputs_ids: dict[int, GuiNodeInput] = {}
@@ -133,7 +129,8 @@ class GuiNode:
         self.static_inputs_ids: dict[int, GuiNodeStaticInput] = {}
 
     def change_theme(self, theme: str):
-         dpg.bind_item_theme(self.id, self.node_themes[theme])
+        if dpg.does_item_exist(self.id):
+            dpg.bind_item_theme(self.id, self.node_themes[theme])
 
     def __create_node_theme(r, g, b):
         with dpg.theme() as node_theme:
@@ -141,12 +138,27 @@ class GuiNode:
                 dpg.add_theme_color(dpg.mvNodeCol_NodeOutline, (r,g,b), category=dpg.mvThemeCat_Nodes)
         return node_theme
     
+    def __create_button_theme(r, g, b):
+        with dpg.theme() as button_theme:
+            with dpg.theme_component(dpg.mvAll):
+                dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5, category=dpg.mvThemeCat_Core)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, (r,g,b), category=dpg.mvThemeCat_Core)
+
+        return button_theme
+    
     node_themes = {
         "default" : None,
         "completed" : __create_node_theme(255, 255, 255),
         "running" : __create_node_theme(0, 255, 0),
         "init" : __create_node_theme(0, 0, 255),
         "error" : __create_node_theme(255, 0, 0),
+        "warning" : __create_node_theme(255, 255, 0),
+    }
+
+    button_themes = {
+        "default" : None,
+        "warning" : __create_button_theme(255, 255, 0),
+        "error" : __create_button_theme(255, 0, 0),
     }
 
 
@@ -183,7 +195,7 @@ class GuiNode:
             static_input.add_attribute(parent)
             self.inputs_ids[parent] = static_input  
         except Exception as e:
-            self.show_message("Error", exception_full_message(e))
+            self.show_error_message(f"Failed to add static input - {name}", exception_full_message(e))
 
     def _add_input(self, name, definition: AttributeDefinition, parent):
         try:
@@ -199,7 +211,7 @@ class GuiNode:
             dpg.bind_item_theme(parent, definition.theme)
 
         except Exception as e:
-            self.show_message("Error", exception_full_message(e))
+            self.show_error_message(f"Failed to add input - {name}", exception_full_message(e))
 
     def _add_output(self, name, definition: AttributeDefinition, parent):
         try:
@@ -210,41 +222,33 @@ class GuiNode:
             output = GuiNodeOutput(self, name, definition)
             output.add_attribute(parent)
             self.outputs_ids[parent] = output
-
             dpg.bind_item_theme(parent, definition.theme)
         except Exception as e:
-            self.show_message("Error", exception_full_message(e))
+            self.show_error_message(f"Failed to add output - {name}", exception_full_message(e))
 
     
-    def show_message(self, title, message):
-        if self.message_ui_id is None or not dpg.does_item_exist(self.message_ui_id):
+    def show_error_message(self, title, message):
+        if self.error_button == None or not dpg.does_item_exist(self.error_button):
             return
-        if self.message_ui_title_id is None or not dpg.does_item_exist(self.message_ui_title_id):
-            return
-        if self.message_ui_text_id is None or not dpg.does_item_exist(self.message_ui_text_id):
-            return
-        
-        dpg.show_item(self.message_ui_id)
-        dpg.set_value(self.message_ui_title_id, f"--- {title} ---")
-        dpg.set_value(self.message_ui_text_id, message)
+        wrapped_title = "\n".join(textwrap.wrap(title, 40, break_long_words=True))
+        dpg.set_item_label(self.error_button, f"{wrapped_title}\nClick to show details")
+        dpg.set_item_user_data(self.error_button, {"title": title, "message": message})
+        dpg.show_item(self.error_button)
 
-
-    def hide_message(self):
-        if self.message_ui_id is None or not dpg.does_item_exist(self.message_ui_id):
+    def show_warning_message(self, title, message):
+        if self.warning_button == None or dpg.does_item_exist(self.warning_button):
             return
-        
-        dpg.hide_item(self.message_ui_id)
+        wrapped_title = "\n".join(textwrap.wrap(title, 40, break_long_words=True))
+        dpg.set_item_label(self.warning_button, f"{wrapped_title}\nClick to show details")
+        dpg.set_item_user_data(self.warning_button, {"title": title, "message": message})
+        dpg.show_item(self.warning_button)
 
     def clear_ui(self):
-        self.hide_message()
         self.change_theme("default")
+        dpg.hide_item(self.warning_button)
+        dpg.hide_item(self.error_button)
 
     def refresh_ui(self):
-
-        self.hide_message()
-
-        print(f"Refreshing {self.name}")
-
         # remove old inputs
         for id, input in list(self.inputs_ids.items()):
             if input.name not in self.node.input_definitions:
@@ -296,12 +300,27 @@ class GuiNode:
     def create_node(self, parent, pos=[0, 0], uuid=None):
         if uuid is None:
             uuid = dpg.generate_uuid()
-        with dpg.node(label=self.name, parent=parent, pos=pos, tag=uuid) as node:
 
-            with dpg.node_attribute(label=self.name, attribute_type=dpg.mvNode_Attr_Static, show=False) as message_ui:
-                self.message_ui_id = message_ui
-                self.message_ui_title_id = dpg.add_text("Title")
-                self.message_ui_text_id = dpg.add_text("Message")
+        with dpg.window(label="Warning", show=False) as message_popup:
+            message_popup_text = dpg.add_text("No message")
+
+        def show_popup(sender, app_data, user_data):
+            title = user_data.get("title", self.node.name())
+            message = user_data.get("message", "No message")
+            pos = dpg.get_mouse_pos(local=False)
+            dpg.set_item_pos(message_popup, pos)
+            dpg.show_item(message_popup)
+            dpg.set_value(message_popup_text, message)
+            dpg.set_item_label(message_popup, title)
+
+        with dpg.node(label=self.name, parent=parent, pos=pos, tag=uuid) as node:
+            self.id = node  
+            with dpg.node_attribute(attribute_type=dpg.mvNode_Attr_Static):
+                self.error_button = dpg.add_button(label="Error message\nClick to show details", callback=show_popup, user_data={"title": "Error", "message": ""}, show=False)
+                self.warning_button = dpg.add_button(label="Warning message\nClick to show details", callback=show_popup, user_data={"title": "Warning", "message": ""}, show=False)
+
+                dpg.bind_item_theme(self.error_button, self.button_themes["error"])
+                dpg.bind_item_theme(self.warning_button, self.button_themes["warning"])
 
             for static_input_name, static_input_type in self.node.static_input_definitions.items():
                 static_input = dpg.add_node_attribute(attribute_type=dpg.mvNode_Attr_Static)
@@ -315,14 +334,10 @@ class GuiNode:
                 output = dpg.add_node_attribute(attribute_type=dpg.mvNode_Attr_Output, shape=output_definition.shape)
                 self._add_output(output_name, output_definition, output)
                 
-
             # custom ui attribute
             with dpg.node_attribute(label="Custom UI", attribute_type=dpg.mvNode_Attr_Static) as custom_ui:
                 self.node.show_custom_ui(custom_ui)
                    
-
-        self.id = node
-
         return self.id
     
 
@@ -477,7 +492,7 @@ class GuiGraph:
 
         node = self.gui_nodes.get(hovered)
         if node is not None:
-            dpg.set_value("info_text", f"{node.node.help}")
+            dpg.set_value("info_text", dpg.get_item_alias(app_data))
 
         pass
 
@@ -546,8 +561,12 @@ class GuiGraph:
                 user_data = dpg.get_item_user_data("node_menu")
                 self.delete_nodes_callback(sender, app_data, user_data)
 
+            def duplicate_selected(sender, app_data, user_data):
+                user_data = dpg.get_item_user_data("node_menu")
+                self.duplicate_nodes_callback(sender, app_data, user_data)
+
             dpg.add_button(label="Delete Node", callback=delete_selected)
-            dpg.add_button(label="Clone Node (todo)", callback=lambda: print("Duplicate Node"), enabled=False)
+            dpg.add_button(label="Duplicate Node", callback=duplicate_selected)
 
 
     def dpg_connection_menu(self):
@@ -563,8 +582,15 @@ class GuiGraph:
                 user_data = dpg.get_item_user_data("selection_menu")
                 self.delete_nodes_callback(sender, app_data, user_data.get("nodes", []))
                 self.delete_connections_callback(sender, app_data, user_data.get("links", []))
-            dpg.add_button(label="Delete All", callback=delete_selected)
-            dpg.add_button(label="Clone All (todo)", callback=lambda: print("Duplicate All"), enabled=False)
+            def duplicate_selected(sender, app_data, user_data):
+                user_data = dpg.get_item_user_data("selection_menu")
+                self.duplicate_selected_callback(sender, app_data, {
+                    "nodes": user_data.get("nodes", []),
+                    "links": user_data.get("links", [])
+                })
+                
+            dpg.add_button(label="Delete Selected", callback=delete_selected)
+            dpg.add_button(label="Duplicate Selected", callback=duplicate_selected)
 
     def dpg_graph_menu(self):
         with dpg.window(label="Create Node", modal=True, tag="graph_menu", no_title_bar=False, width=200, show=False):
@@ -850,7 +876,63 @@ class GuiGraph:
         dpg.show_item("connection_menu")
         dpg.hide_item("node_menu")
         dpg.hide_item("selection_menu")
-        
+
+    def duplicate_nodes_callback(self, sender, app_data, user_data):
+        nodes_to_duplicate = user_data
+        self.__duplicate_nodes(nodes_to_duplicate)
+        dpg.hide_item("node_menu")
+        dpg.hide_item("selection_menu")
+
+    def __duplicate_nodes(self, nodes_to_duplicate):
+        new_nodes = []
+        try:
+            for node_id in nodes_to_duplicate:
+                node_name = dpg.get_item_alias(node_id)
+                node = self.gui_nodes.get(node_name).node
+                node_data = node.save_to_dict()
+                new_node = node.__class__()
+                new_node.load_from_dict(node_data)
+                old_position = dpg.get_item_pos(node_id)
+                new_node.metadata["position"] = [old_position[0] + 50, old_position[1] + 50]
+                new_nodes.append(self.graph.add_node(new_node))
+        except Exception as e:
+            self.display_main_popup("Error duplicating nodes", exception_full_message(e))
+        return new_nodes
+
+    def duplicate_selected_callback(self, sender, app_data, user_data):
+        selected_nodes = dpg.get_selected_nodes("node_editor")
+        selected_nodes_names = [dpg.get_item_alias(node) for node in selected_nodes]
+        new_nodes_names = self.__duplicate_nodes(selected_nodes)
+
+        def get_node_index(node_name):
+            for index, node in enumerate(selected_nodes_names):
+                if node == node_name:
+                    return index
+            return None
+
+        selected_links = dpg.get_selected_links("node_editor")
+        try:
+            for link_id in selected_links:
+                gui_connection = self.gui_connections.get(link_id)
+                if gui_connection is None:
+                    continue
+
+                new_input_node = new_nodes_names[get_node_index(gui_connection.connection.input_node_name)]
+                new_output_node = new_nodes_names[get_node_index(gui_connection.connection.output_node_name)]
+                self.graph.add_connection(new_output_node, gui_connection.connection.output_name, new_input_node, gui_connection.connection.input_name)
+        except Exception as e:
+            self.display_main_popup("Error duplicating connections", exception_full_message(e))
+
+        dpg.clear_selected_links("node_editor")
+        dpg.clear_selected_nodes("node_editor")
+
+        for node_name in new_nodes_names:
+            config = dpg.get_item_configuration(node_name)
+            dpg.is_item_clicked
+            print(config)
+       
+        dpg.hide_item("selection_menu")
+
 
     def show_selection_menu_callback(self, sender, app_data, user_data):
         selected_links = user_data.get("links")
@@ -889,19 +971,38 @@ class GuiGraph:
 
 
     def show_graph_menu_callback(self, sender, app_data, user_data = None):
-        dpg.set_item_pos("graph_menu", dpg.get_mouse_pos(local=False))
+        position = dpg.get_mouse_pos(local=False)
+        dpg.set_item_pos("graph_menu", position)
+        dpg.set_item_user_data("graph_menu", position)
         dpg.show_item("graph_menu")
         dpg.hide_item("node_menu")
         dpg.hide_item("connection_menu")
         dpg.hide_item("selection_menu")
 
-
     def add_node_callback(self, sender, app_data, user_data):
         try:
             node = self.available_nodes.get(user_data)()
-            node.metadata["position"] = dpg.get_mouse_pos(local=True)
-            self.graph.add_node(node)
 
+            children = dpg.get_item_children("node_editor", 1)
+            # you need to have reference point to be able to add new node
+            # this is a workaround to add first node
+            if len(children) == 0:
+                dummy_item = dpg.add_node(parent="node_editor", label="dummy")
+                ref_screen_pos = dpg.get_item_rect_min(dummy_item)
+                ref_grid_pos = dpg.get_item_pos(dummy_item)
+                dpg.delete_item(dummy_item)
+            else:
+                ref_item = children[0]
+                ref_screen_pos = dpg.get_item_rect_min(ref_item)
+                ref_grid_pos = dpg.get_item_pos(ref_item)
+
+            # starting_pos = dpg.get_mouse_pos(local=False)
+            starting_pos = dpg.get_item_user_data("graph_menu")
+            pos = [starting_pos[0] - ref_screen_pos[0] + ref_grid_pos[0], 
+                   starting_pos[1] - ref_screen_pos[1] + ref_grid_pos[1]]
+
+            node.metadata["position"] = pos
+            self.graph.add_node(node)
             dpg.hide_item("graph_menu")
         except Exception as e:
             self.display_main_popup("Error adding node", exception_full_message(e))
@@ -979,14 +1080,14 @@ graph_window = node_editor.show()
 
 dpg.set_primary_window(graph_window, True)
 
-dpg.start_dearpygui()
-
-
 if DEBUG:
+    # dpg.show_style_editor()
     while dpg.is_dearpygui_running():
         jobs = dpg.get_callback_queue() # retrieves and clears queue
         dpg.run_callbacks(jobs)
         dpg.render_dearpygui_frame()
+else:
+    dpg.start_dearpygui()
 
 
 dpg.destroy_context()

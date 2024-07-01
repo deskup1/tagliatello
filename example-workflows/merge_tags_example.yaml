@@ -85,8 +85,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1547
-      - 488
+      - 1551
+      - 503
     static_inputs: {}
     type: Collector
   Convert Tags To String_7:
@@ -97,8 +97,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1502
-      - 189
+      - 1509
+      - 180
     static_inputs: {}
     type: Convert Tags To String
   Display_1425:
@@ -106,7 +106,7 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 2023
+      - 2071
       - 406
     static_inputs: {}
     type: Display
@@ -115,7 +115,7 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 292
+      - 297
       - 135
     static_inputs: {}
     type: Display
@@ -127,8 +127,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1265
-      - 470
+      - 1258
+      - 479
     static_inputs: {}
     type: File Path
   Files From Folder_0:
@@ -145,8 +145,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - -138
-      - 119
+      - -113
+      - 118
     static_inputs: {}
     type: Files From Folder
   Find Caret Files_1:
@@ -156,8 +156,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 519
-      - 248
+      - 479
+      - 223
     static_inputs: {}
     type: Find Caret Files
   Input Folder_1434:
@@ -167,8 +167,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 992
-      - 639
+      - 949
+      - 631
     static_inputs: {}
     type: Input Folder
   Iterator_1430:
@@ -189,8 +189,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1207
-      - 173
+      - 1213
+      - 170
     static_inputs: {}
     type: Join Tags
   Load Tags From Files_3:
@@ -212,8 +212,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1790
-      - 208
+      - 1825
+      - 218
     static_inputs: {}
     type: Save to Text Files
   Split File Path_1431:
@@ -222,8 +222,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 1049
-      - 467
+      - 1085
+      - 475
     static_inputs: {}
     type: Split File Path
   Tag Images_2:
@@ -231,8 +231,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 893
-      - 65
+      - 953
+      - 23
     static_inputs: {}
     type: Tag Images
   WD14 Tagger_16:
@@ -240,8 +240,8 @@ nodes:
     default_outputs: {}
     metadata:
       position:
-      - 556
-      - -73
+      - 535
+      - -86
     static_inputs:
       cache_dir: hf_cache
       character_threshold: 0.6000000238418579

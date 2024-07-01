@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, AnyAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, StringAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, AttributeKind, AnyAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, StringAttributeDefinition
 
 import src.helpers as helpers
 
@@ -7,6 +7,7 @@ import os
 
 import dearpygui.dearpygui as dpg
 import filetype
+import copy
 
 import PIL.Image as Image
 
@@ -17,15 +18,30 @@ class DisplayNode(BaseNode):
         self.__file_content_tag = None
         self.__image_tag = None
         self.__texture_tag = None
+        
+        self.__output_defintions = {"out": AnyAttributeDefinition()}
 
+        self._on_input_connected += self.__on_input_connected
+        self._on_input_disconnected += self.__on_input_disconnected
     
+    def __on_input_connected(self, input_name: str, output_node: BaseNode, output_name: str):
+        if input_name == "in":
+            self.__output_defintions["out"] = output_node.output_definitions[output_name].copy()
+            self.__output_defintions["out"].kind = AttributeKind.VALUE
+            self.refresh_ui()
+        
+    def __on_input_disconnected(self, input_name: str, _, __):
+        if input_name == "in":
+            self.__output_defintions["out"] = AnyAttributeDefinition()
+            self.refresh_ui()
+
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {"in": AnyAttributeDefinition()}
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": AnyAttributeDefinition()}
+        return self.__output_defintions
     
     @classmethod
     def name(cls) -> str:
@@ -261,50 +277,3 @@ class WaitNode(BaseNode):
         input = kwargs["in"]
         time.sleep(seconds)
         return {"out": input}
-
-class ConsoleLogsNode(BaseNode):
-    def __init__(self):
-        super().__init__()
-
-    @property
-    def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"logs": StringAttributeDefinition()}
-    
-    @property
-    def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return { "logs" : StringAttributeDefinition( list=True) }
-    
-    @classmethod
-    def name(cls) -> str:
-        return "Console Logs"
-    
-    @classmethod
-    def category(cls) -> str:
-        return "Misceallaneous"
-    
-    def run(self, **kwargs) -> dict:
-        return {}
-    
-
-class DebugComboBoxNode(BaseNode):
-    def __init__(self):
-        super().__init__()
-    
-    @property
-    def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"options": ComboAttributeDefinition(lambda: ["Option 1", "Option 2", "Option 3"])}
-    
-    @property
-    def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"selected": AnyAttributeDefinition()}
-    
-    @classmethod
-    def name(cls) -> str:
-        return "Debug Combo Box"
-    
-    @classmethod
-    def category(cls) -> str:
-        return "Misceallaneous"
-    
-    def run(self, **kwargs) -> dict[str, object]:
-        return {"selected": self.default_inputs.get("options", "")}

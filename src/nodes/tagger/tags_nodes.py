@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition, DictAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition
+from ...graph import BaseNode, ListAttributeDefinition, AttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition, DictAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, MultiFileAttributeDefinition
 import os
 
 
@@ -11,7 +11,7 @@ class FindCaretFilesNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
+            "files": MultiFileAttributeDefinition(),
             "caret_file_extension": StringAttributeDefinition(),
             "on_missing_files": ComboAttributeDefinition(lambda: ["error", "skip", "empty"], allow_custom=False)
         }
@@ -19,8 +19,8 @@ class FindCaretFilesNode(BaseNode):
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
-            "caret_files": StringAttributeDefinition(list=True)
+            "files": MultiFileAttributeDefinition(),
+            "caret_files": MultiFileAttributeDefinition()
         }
     
     @classmethod
@@ -75,8 +75,8 @@ class JoinTagsNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "tags1": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
-            "tags2": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
+            "tags1": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
+            "tags2": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
             "value_mode": ComboAttributeDefinition(lambda: ["sum", "max", "min", "average", "replace", "skip"], allow_custom=False),
             "position": ComboAttributeDefinition(lambda: ["before", "after", "alphabetical desc", "alphabetical asc", "value desc", "value asc"])
         }
@@ -84,7 +84,7 @@ class JoinTagsNode(BaseNode):
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True)
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
         }
     
     @classmethod
@@ -159,7 +159,7 @@ class ConvertTagsToStringNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
             "normalize_tags": BoolenAttributeDefinition(),
             "keep_values": BoolenAttributeDefinition(),
             "sort_mode": ComboAttributeDefinition(lambda: ["none", "alphabetical desc", "alphabetical asc", "value desc", "value asc"], allow_custom=False)
@@ -168,7 +168,7 @@ class ConvertTagsToStringNode(BaseNode):
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "tags_string": StringAttributeDefinition(list=True)
+            "tags_string": ListAttributeDefinition(StringAttributeDefinition())
         }
     
     @classmethod
@@ -226,7 +226,7 @@ class LoadTagsFromFilesNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
+            "files": MultiFileAttributeDefinition(),
             "on_missing_files": ComboAttributeDefinition(lambda: ["error", "skip", "empty"], allow_custom=False),
             "normalize_tags": BoolenAttributeDefinition(),
             "default_value": FloatAttributeDefinition(),
@@ -235,8 +235,8 @@ class LoadTagsFromFilesNode(BaseNode):
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
-            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True)
+            "files": MultiFileAttributeDefinition(),
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition()))
         }
     
     @classmethod
@@ -330,8 +330,8 @@ class FilterFilesByTagNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "images": StringAttributeDefinition(list=True),
-            "tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
+            "images": MultiFileAttributeDefinition(),
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
             "tag_key": StringAttributeDefinition(),
             "tag_value": FloatAttributeDefinition(),
             "filter_mode": ComboAttributeDefinition(lambda: ["greater", "less", "equal", "not equal"], allow_custom=False)
@@ -340,10 +340,10 @@ class FilterFilesByTagNode(BaseNode):
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "remaining_images": StringAttributeDefinition(list=True),
-            "remaining_images_tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True),
-            "filtered_images": StringAttributeDefinition(list=True),
-            "filtered_images_tags": DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition(), list=True)
+            "remaining_images": MultiFileAttributeDefinition(),
+            "remaining_images_tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
+            "filtered_images": MultiFileAttributeDefinition(),
+            "filtered_images_tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
         }
     
     @classmethod

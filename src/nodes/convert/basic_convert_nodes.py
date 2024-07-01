@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, IntegerAttributeDefinition, AnyAttributeDefinition, FloatAttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition
+from ...graph import BaseNode, AttributeKind, AttributeDefinition, ListAttributeDefinition ,IntegerAttributeDefinition, AnyAttributeDefinition, FloatAttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition
 import copy
 
 class ToAnyNode(BaseNode):
@@ -30,23 +30,19 @@ class ToListNode(BaseNode):
         super().__init__()
         self.set_default_input("in", 0)
 
-        self.__output_definitions = {"out": AnyAttributeDefinition(list=True)}
+        self.__output_definitions = {"out": ListAttributeDefinition(AnyAttributeDefinition())}
 
         self._on_input_connected += self.__change_output_definition_on_connect
         self._on_input_disconnected += self.__change_output_definition_on_disconnect
 
     def __change_output_definition_on_connect(self, input_name: str, output_node: BaseNode, output_name: str):
         definition = output_node.output_definitions.get(output_name, AnyAttributeDefinition())
-        if definition.list:
-            self.__output_definitions["out"] = definition
-        else:
-            self.__output_definitions["out"] = copy.deepcopy(definition)
-            self.__output_definitions["out"].list = True
-
+        self.__output_definitions["out"] = definition.copy()
+        self.__output_definitions["out"].kind = AttributeKind.VALUE
         self.refresh_ui()
 
     def __change_output_definition_on_disconnect(self, _, __, ___):
-        self.__output_definitions["out"] = AnyAttributeDefinition(list=True)
+        self.__output_definitions["out"] = ListAttributeDefinition(AnyAttributeDefinition())
         self.refresh_ui()
     
     @property
@@ -172,11 +168,11 @@ class SplitStringNode(BaseNode):
     
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"in": StringAttributeDefinition(list=False), "separator": StringAttributeDefinition()}
+        return {"in": StringAttributeDefinition(), "separator": StringAttributeDefinition()}
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": StringAttributeDefinition(list=True)}
+        return {"out": ListAttributeDefinition(StringAttributeDefinition())}
     
     @classmethod
     def name(cls) -> str:
@@ -203,11 +199,11 @@ class JoinStringNode(BaseNode):
     
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"in": StringAttributeDefinition(list=True), "separator": StringAttributeDefinition()}
+        return {"in": ListAttributeDefinition(StringAttributeDefinition()), "separator": StringAttributeDefinition()}
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": StringAttributeDefinition(list=False)}
+        return {"out": StringAttributeDefinition()}
     
     @classmethod
     def name(cls) -> str:
@@ -233,7 +229,7 @@ class ListCountNode(BaseNode):
     
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"in": AnyAttributeDefinition(list=True)}
+        return {"in": ListAttributeDefinition(AnyAttributeDefinition())}
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:

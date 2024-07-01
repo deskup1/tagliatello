@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeKind, AttributeDefinition, IntegerAttributeDefinition, ComboAttributeDefinition, MultipleAttributeDefinition, BoolenAttributeDefinition, FloatAttributeDefinition, StringAttributeDefinition
+from ...graph import BaseNode, ListAttributeDefinition, AttributeDefinition, IntegerAttributeDefinition, ComboAttributeDefinition, MultipleAttributeDefinition, BoolenAttributeDefinition, FloatAttributeDefinition, StringAttributeDefinition
 import dearpygui.dearpygui as dpg
 from .llm_message import LlmChatMessage
 from .openai_chat_model import OpenAIChatModel
@@ -19,12 +19,12 @@ class InferenceLlmNode(BaseNode):
         def input_definitions(self) -> dict[str, AttributeDefinition]:
             return {
                 "model": AttributeDefinition(type_name="llm"),
-                "messages": AttributeDefinition(type_name="chat_message", list=True),
+                "messages": ListAttributeDefinition(AttributeDefinition(type_name="chat_message")),
                 "message": AttributeDefinition(type_name="chat_message"),
                 "temperature": FloatAttributeDefinition(min_value=-1.0),
                 "top_p": FloatAttributeDefinition(min_value=-1.0),
                 "max_tokens": IntegerAttributeDefinition(min_value=-1),
-                "stop": StringAttributeDefinition(list=True),
+                "stop": ListAttributeDefinition(StringAttributeDefinition()),
                 "frequency_penalty": FloatAttributeDefinition()
             }
         

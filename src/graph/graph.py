@@ -3,12 +3,15 @@ if __name__ == "__main__":
     sys.path.append("src")
 
 from .node import BaseNode, AttributeKind, BaseNodeEvent
-
+from src.nodes.unknown_node import UnknownNode
 
 import yaml
+# import multiprocessing
 import threading
 import os
 import importlib
+import queue
+import time
 
 class GraphException(Exception):
     def __init__(self, message: str):
@@ -56,17 +59,15 @@ class Graph:
         self.on_error = BaseNodeEvent()
 
 
-        self.__counter = 0
-
         self.__max_concurrency = 10
 
-        self.__run_data_nodes_results = {}
-        self.__run_data_nodes_finished = []
-        self.__run_data_jobs = {}
-        self.__run_data_lock = threading.Lock()
-        self.__main_thread: threading.Thread = None
+        self.__run_results = {}
+        self.__nodes_with_unfinished_generator_inputs = set()
+        self.__nodes_with_unfinished_generator_outputs = set()
 
         self.__running = False
+        self.__main_process = None
+
 
     def  is_running(self) -> bool:
         return self.__running
@@ -97,22 +98,21 @@ class Graph:
             spec.loader.exec_module(module)
             if hasattr(module, "register_nodes"):
                 self.register_nodes(module.register_nodes())
-
-        # for root, dirs, files in os.walk(root_directory):
-        #     module_name = f"{module_prefix}.{os.path.basename(root)}"
-        #     print(root, dirs, files, module_name)
-        #     spec = importlib.util.spec_from_file_location(module_name, os.path.join(root, "__init__.py"))
-        #     module = importlib.util.module_from_spec(spec)
-        #     spec.loader.exec_module(module)
-        #     if hasattr(module, "register_nodes"):
-        #         self.register_nodes(module.register_nodes())
             
     def register_node(self, node_cls):
         self.available_nodes[node_cls.name()] = node_cls
 
+    def get_unique_node_name(self, node: BaseNode) -> str:
+        counter = 0
+        name = f"{node.name()} {counter}"
+        while name in self.nodes:
+            counter += 1
+            name = f"{node.name()} {counter}"
+
+        return name
+    
     def add_node(self, node: BaseNode) -> str:
-        name = f"{node.name()}_{self.__counter}"
-        self.__counter += 1
+        name = self.get_unique_node_name(node)
         self.nodes[name] = node
         self.on_node_added.trigger(node)
         return name
@@ -269,11 +269,11 @@ class Graph:
     def clear(self):
         self.nodes = {}
         self.connections = {}
-        self.__counter = 0
 
         self.__running = False
-        self.__run_data = {}
-        self.__run_data_nodes_finished = []
+        self.__run_results = {}
+        self.__nodes_with_unfinished_generator_inputs = set()
+        self.__nodes_with_unfinished_generator_outputs = set()
 
         # run_data lock
 
@@ -302,348 +302,263 @@ class Graph:
             data = yaml.load(file, Loader=yaml.FullLoader)
 
         for name, node_data in data["nodes"].items():
-            node = self.available_nodes[node_data["type"]]()
-            node.load_from_dict(node_data)
+            node: BaseNode = self.available_nodes.get(node_data.get("type"), UnknownNode)()
+            try:
+                node.load_from_dict(node_data)
+            except Exception as e:
+                node._on_error.trigger(e)
             self.nodes[name] = node
             self.on_node_added.trigger(node)
 
         for key, connection_data in data["connections"].items():
             connection = Connection()
-            connection.load_from_dict(connection_data)
-            self.connections[key] = connection
-
-            self.on_connection_added.trigger(connection)
-            input_node = self.get_node_by_name(connection.input_node_name)
-            output_node = self.get_node_by_name(connection.output_node_name)
-
-            input_node._on_input_connected.trigger(connection.input_name, output_node, connection.output_name)
-            output_node._on_output_connected.trigger(connection.output_name, input_node, connection.input_name)
-
-        # find node name with highest counter
-        max_counter = 0
-        for name in self.nodes.keys():
-            # remove all characters from name which are not digits
-            counter = int(''.join(filter(str.isdigit, name)))
-            if counter > max_counter:
-                max_counter = counter
-
-        self.__counter = max_counter + 1
-
-
-    def __get_available_nodes(self):
-
-        available_nodes = []
-        for name, node in self.nodes.items():
-
-            # check if node is finished
-            if name in self.__run_data_nodes_finished:
-                continue
-
-            # check if running
-            if name in self.__run_data_jobs:
-                continue
-
-            inputs = self.get_input_connections_for_node(name)
-            outputs = self.get_output_connections_for_node(name)
-
-            # check if any input is running
-            inputs_running = False
-            for input_connection in inputs:
-                if input_connection.output_node_name in self.__run_data_jobs:
-                    inputs_running = True
-                    break
-            if inputs_running:
-                continue
-
-                # check if any output is running
-            outputs_running = False
-            for output_connection in outputs:
-                if output_connection.input_node_name in self.__run_data_jobs:
-                    outputs_running = True
-                    break
-            if outputs_running:
-                continue
-      
-            # check if all inputs are finished
-            inputs_finished = True
-            for input_connection in inputs:
-                if input_connection.output_node_name not in self.__run_data_nodes_finished:
-                    inputs_finished = False
-                    break
-
-                run_data = self.__run_data_nodes_results.get(input_connection.output_node_name, {})
-                input_data = run_data.get(input_connection.output_name, None) if run_data is not None else None
-
-                if input_data is None:
-                    print(f"Input data is None: {input_connection.output_node_name}.{input_connection.output_name}")
-                    break
-
-                input_type = node.input_definitions.get(input_connection.input_name, None)
-                if input_type.kind == AttributeKind.GENERATOR and isinstance(input_data, BaseNode.GeneratorExit):
-                    continue
-
-                if isinstance(input_data, BaseNode.GeneratorContinue) or isinstance(input_data, BaseNode.GeneratorExit):
-                    inputs_finished = False
-                    break
-
-            if not inputs_finished:
-                continue
-
-            # check if atleast 1 output is not finished if node is non cacheable
-            outputs_finished = False
-            if not node.cache:
-                outputs_finished = True
-                for output_connection in outputs:
-                    if output_connection.input_node_name not in self.__run_data_nodes_finished:
-                        outputs_finished = False
-                        break
-
-                    run_data = self.__run_data_nodes_results.get(output_connection.input_node_name, {})
-                    output_data = run_data.get(output_connection.input_name, None)
-                    if isinstance(output_data, BaseNode.GeneratorContinue) or isinstance(output_data, BaseNode.GeneratorExit):
-                        outputs_finished = False
-                        break
-
-            if outputs_finished:
-                continue
-
-            available_nodes.append(name)
-
-        return available_nodes
-
-    def stop(self):
-        self.__running = False
-        self.__run_data_nodes_results = {}
-        self.__run_data_nodes_finished = []
-        self.__run_data_jobs = {}
-        for node in self.nodes.values():
             try:
-                pass
-                # node.stop()
+                connection.load_from_dict(connection_data)
+
+                # check if can add connection
+                output_node = self.get_node_by_name(connection.output_node_name)
+                input_node = self.get_node_by_name(connection.input_node_name)
+                can_connect, error = self.can_add_connection(output_node, connection.output_name, input_node, connection.input_name)
+                if not can_connect:
+                    raise GraphException(error)
+
+                self.connections[key] = connection
             except Exception as e:
-                node._on_error.trigger(e)
-        self.on_graph_stopped.trigger()
-        print("Graph stopped")
+                self.on_error.trigger(e)
+                continue
 
-    def __mark_all_outputs_as_not_finished(self, node: BaseNode, make_self_not_finished: bool = True):
+            try:    
+                self.on_connection_added.trigger(connection)
+                input_node = self.get_node_by_name(connection.input_node_name)
+                output_node = self.get_node_by_name(connection.output_node_name)
 
-        node_name = self.get_node_name(node)
-        if node_name not in self.__run_data_nodes_finished:
-            return
-        
-        # mark node as not finished
-        if make_self_not_finished:
-            self.__run_data_nodes_finished.remove(node_name)
-            node._on_node_ready.trigger()
+                input_node._on_input_connected.trigger(connection.input_name, output_node, connection.output_name)
+                output_node._on_output_connected.trigger(connection.output_name, input_node, connection.input_name)
+            except Exception as e:
+                self.on_error.trigger(e)
 
-        # get all output connections
+    def __mark_loop_as_finished(self, node: BaseNode):
+        # get output connections
         output_connections = self.get_output_connections_for_node(node)
-        for output_connection in output_connections:
-            output_node = self.get_node_by_name(output_connection.input_node_name)
-            self.__mark_all_outputs_as_not_finished(output_node, True)
 
-    def __mark_output_generators_as_not_finished(self) -> bool:
-        any_generators = False
-        for node in self.nodes.values():
+        # if any ot the output is generator with unfinished input, mark it as finished
+        # and remove it from the list
+        # else, continue with loop
+        for connection in output_connections:
+            input_node = self.get_node_by_name(connection.input_node_name)
+            if connection.input_name in input_node.input_definitions:
+                definition = input_node.input_definitions[connection.input_name]
+                if definition.kind == AttributeKind.GENERATOR:
+                    if connection.input_node_name in self.__nodes_with_unfinished_generator_inputs:
+                        self.__nodes_with_unfinished_generator_inputs.remove(connection.input_node_name)
 
-            node_name = self.get_node_name(node)
-            if node_name not in self.__run_data_nodes_finished:
-                continue
+                        # run node with generator input as generator exit
+                        inputs_override = {connection.input_name: BaseNode.GeneratorExit()}
+                        self.__run_node(input_node, inputs_override)
+                    else:
+                        self.__mark_loop_as_finished(input_node)
+                else:
+                    self.__mark_loop_as_finished(input_node)
 
-
-            for name, definition in node.output_definitions.items():
-                if definition.kind != AttributeKind.GENERATOR:
-                    continue
-
-                result = self.__run_data_nodes_results.get(node_name, {})
-                output_result = result.get(name, None)
-
-                if not isinstance(output_result, BaseNode.GeneratorExit):
-                    any_generators = True
-
-                    self.__run_data_nodes_finished.remove(node_name)
-                    
-                    node._on_node_ready.trigger()
-                    break
-
-        return any_generators
-    
-    def __mark_input_generators_as_not_finished(self):
+    def __run_node(self, node: BaseNode, inputs_override: dict[str, any] = {}):
         
-        has_generators = False
-        for node in self.nodes.values():
-            node_name = self.get_node_name(node)
+       
+        node_name = self.get_node_name(node)
+        print(f"Running node: {node_name}")
 
-            # skip if node is not finished
-            if node_name not in self.__run_data_nodes_finished:
-                continue
+        # get input data
+        input_data = node.default_inputs.copy()
+        for connection in self.get_input_connections_for_node(node):
 
-            mark_as_not_finished = False
+            output_data = self.__run_results.get(connection.output_node_name, None)
 
-            input_connections = self.get_input_connections_for_node(node_name)
-            for input_connection in input_connections:
-                input_definition = node.input_definitions.get(input_connection.input_name, None)
-                if input_definition is None or input_definition.kind != AttributeKind.GENERATOR:
-                    continue
+            if connection.output_node_name in self.__run_results and len(output_data) == 0:
+                self.__run_node(self.get_node_by_name(connection.output_node_name))
 
-                result = self.__run_data_nodes_results.get(input_connection.output_node_name, {})
-                input_result = result.get(input_connection.output_name, None)
-                if not isinstance(input_result, BaseNode.GeneratorExit):
-                    mark_as_not_finished = True
-                    has_generators = True
-
-                    # replace input with GeneratorExit
-                    self.__run_data_nodes_results[input_connection.output_node_name][input_connection.output_name] = BaseNode.GeneratorExit()
-                    break
-
-            if mark_as_not_finished:
-                self.__run_data_nodes_finished.remove(node_name)
-                node._on_node_ready.trigger()
+            output_data = self.__run_results.get(connection.output_node_name, {}).get(connection.output_name, BaseNode.GeneratorExit())
+            input_data[connection.input_name] = output_data
 
 
-        return has_generators
-    
-    def __validate_node_results(self, node: BaseNode, results: dict):
-        if results is None:
-            raise GraphException(f"Results for node {node.name()} is None")
-        if not isinstance(results, dict):
-            raise GraphException(f"Results for node {node.name()} is not a dictionary")
+        input_data.update(inputs_override)
+        print(input_data)
+
+        # run node
+        result = node.run(**input_data)
+        self.__run_results[node_name] = result
 
         for name, definition in node.output_definitions.items():
-            if name not in results:
-                raise GraphException(f"Output name {name} not found in results for node {node.name()}")
+            if definition.kind == AttributeKind.GENERATOR:
+                output_result = result[name]
+                if output_result != BaseNode.GeneratorExit():
+                    self.__nodes_with_unfinished_generator_outputs.add(node_name)
+                elif node_name in self.__nodes_with_unfinished_generator_outputs:
+                    self.__nodes_with_unfinished_generator_outputs.remove(node_name)
+                    self.__mark_loop_as_finished(node)
 
-    
-    def __run_node(self, node: BaseNode):
+        for name, definition in node.input_definitions.items():
+            if definition.kind == AttributeKind.GENERATOR:
+                input_result = input_data[name]
+                if input_result != BaseNode.GeneratorExit():
+                    self.__nodes_with_unfinished_generator_inputs.add(node_name)
+                elif node_name in self.__nodes_with_unfinished_generator_inputs:
+                    self.__nodes_with_unfinished_generator_inputs.remove(node_name)
 
-        # init node if lazy init and has no results in run_data
-        node_name = self.get_node_name(node)
-        if node.lazy_init and node_name not in self.__run_data_nodes_results:
-            try:
-                node._on_init.trigger()
-                node.init()
-                node._on_init_finished.trigger()
-            except Exception as e:
-                node._on_error.trigger(e)
-                self.stop()
-                return
+        # clear non cacheable input nodes
+        for connection in self.get_input_connections_for_node(node):
+            if not self.get_node_by_name(connection.output_node_name).cache:
+                self.__run_results[connection.output_node_name] = {}
+                print(f"Clearing node {connection.output_node_name}")
 
-        input_data = {}
-        input_connections = self.get_input_connections_for_node(node)
-        for input_connection in input_connections:
-            run_data: dict = self.__run_data_nodes_results.get(input_connection.output_node_name, {})
-            input_data[input_connection.input_name] = run_data.get(input_connection.output_name, None)
+        return result
 
+    def __can_run_node(self, node: BaseNode) -> bool:
+        for connection in self.get_input_connections_for_node(node):
+            output_node = self.get_node_by_name(connection.output_node_name)
+            input_node = self.get_node_by_name(connection.input_node_name)
 
-        input_data = {**node.default_inputs, **input_data}
-
-        # if any of the inputs are GeneratorExit, replace them with null
-        for input_name, input_value in input_data.items():
-            input_type = node.input_definitions.get(input_name, None)
-            if isinstance(input_value, BaseNode.GeneratorExit) and input_type.kind != AttributeKind.GENERATOR:
-                input_data[input_name] = None
-
-        try:
-            node._on_run.trigger()
-            result = node.run(**input_data)
-            node._on_run_finished.trigger()
-
-            self.__validate_node_results(node, result)
-
-        except Exception as e:
-            node._on_error.trigger(e)
-            self.stop()
-            return
-        
-
-        self.__run_data_nodes_results[node_name] = result
-        self.__run_data_nodes_finished.append(node_name)
-
-        # check if any outputs are generators
-        for output_name, output_definition in node.output_definitions.items():
-            if output_definition.kind != AttributeKind.GENERATOR:
+            definition = input_node.input_definitions[connection.input_name]
+            if definition.kind == AttributeKind.EVENT:
                 continue
-            output_result = result.get(output_name, None)
-            if not isinstance(output_result, BaseNode.GeneratorExit):
-                self.__mark_all_outputs_as_not_finished(node, False)
-                break
 
-        # check if any inputs are non caching
-        for input_connection in input_connections:
-            input_node = self.get_node_by_name(input_connection.output_node_name)
-            if not input_node.cache:
-                self.__run_data_nodes_finished.remove(input_connection.output_node_name)
-                input_node._on_node_ready.trigger()
-     
-        del self.__run_data_jobs[node_name]
-        
-
-    def __run_loop(self):
-        try:
-            while self.__running:
-                
-                # if no available nodes and no running jobs, stop
-                available_nodes = self.__get_available_nodes()
-
-                if len(available_nodes) == 0 and len(self.__run_data_jobs) == 0:
-                    # check if any output generators are not finished
-                    if self.__mark_output_generators_as_not_finished():
-                        continue
-
-                    # check if any input generators are not finished
-                    if self.__mark_input_generators_as_not_finished():
-                        continue
-
-                    self.stop()
-                    break
-
-                # if running jobs are more or equal to max concurrency, wait for some jobs to finish
-                if len(self.__run_data_jobs) >= self.__max_concurrency:
+            if connection.output_node_name not in self.__run_results:
+                if not output_node.cache:
+                    can_run_output_node = self.__can_run_node(output_node)
+                    if not can_run_output_node:
+                        print(f"Cant run node {input_node} because output node {output_node} cant run")
+                        return False
                     continue
 
-                # run available nodes
-                while len(available_nodes) > 0 and len(self.__run_data_jobs) < self.__max_concurrency:
-                    node_name = available_nodes.pop(0)
-                    node = self.get_node_by_name(node_name)
-                    # self.__run_data_jobs[node_name] = threading.Thread(target=self.__run_node, args=(node,)).start()
-                    self.__run_data_jobs[node_name] = "dummy"
-                    self.__run_node(node)
+                else:
+                    print(f"Cant run node {input_node} because output node {output_node} is not in run results")
+                    return False
+            if connection.output_name not in self.__run_results[connection.output_node_name]:
+                print(f"Cant run node {input_node} because output name {connection.output_name} is not in run results")
+                return False
             
-            self.stop()
-        except Exception as e:
-            self.on_error.trigger(e)
-            self.stop()
-            raise e
+            node_value = self.__run_results[connection.output_node_name][connection.output_name]
+            if node_value == BaseNode.GeneratorExit() or node_value == BaseNode.GeneratorContinue():
+                print(f"Cant run node {input_node} because output node {connection.output_node_name} is generator exit or continue")
+                return False
+            
+        return True
+    
+    def __run(self):
 
-    def run(self, max_concurrency: int = 1):
-        if self.__running:
-            raise GraphException("Graph is already running")
-        
-        if self.__main_thread is not None and self.__main_thread.is_alive():
-            raise GraphException("Graph is already running")
-        
-        if len(self.nodes) == 0:
-            raise GraphException("No nodes in graph")
-        
-        self.__running = True
-        self.__run_data_nodes_results = {}
-        self.__run_data_nodes_finished = []
-        self.__run_data_jobs = {}
-        self.__max_concurrency = max_concurrency
-        self.on_graph_started.trigger()
-        
+        # get all staring nodes
+        run_queue = queue.Queue()
+        scheduled_nodes = set()
+        nodes_priority = {}
+        iteration_counter = 0
 
-        # initialize all non lazy nodes
-        for name, node in self.nodes.items():
-            if not node.lazy_init:
-                try:
+        for node in self.nodes.values():
+            if len(self.get_input_connections_for_node(node)) == 0:
+                run_queue.put(node)
+                node_name = self.get_node_name(node)
+                nodes_priority[node_name] = iteration_counter
+
+        # init nodes
+        for node in self.nodes.values():
+            if not self.__running:
+                return
+            
+            try:
+                if not node.lazy_init:
                     node._on_init.trigger()
                     node.init()
                     node._on_init_finished.trigger()
-                except Exception as e:
-                    node._on_error.trigger(e)
-                    self.stop()
-                    return
+            except Exception as e:
+                self.on_error.trigger(e)
+                node._on_error.trigger(e)
+                self.__running = False
+                break
 
-        # start run loop on separate thread
-        self.__main_thread = threading.Thread(target=self.__run_loop).start()
+        # run nodes
+        while not run_queue.empty() and self.__running:
+
+            iteration_counter += 1
+
+            node: BaseNode = run_queue.get()
+            node_name = self.get_node_name(node)
+
+            if node in scheduled_nodes:
+                scheduled_nodes.remove(node)
+
+            try:
+
+                node._on_run.trigger()
+                # time.sleep(1)
+                self.__run_node(node)
+                node._on_run_finished.trigger()
+            except Exception as e:
+                node._on_error.trigger(e)
+                self.__running = False
+                break
+
+            for connection in self.get_output_connections_for_node(node):
+                input_node = self.get_node_by_name(connection.input_node_name)
+                input_node_name = self.get_node_name(input_node)
+                scheduled_nodes.add(input_node)
+                if input_node_name not in nodes_priority:
+                    nodes_priority[input_node_name] = iteration_counter
+
+            if run_queue.qsize() == 0:
+                # sort nodes by priority descending
+                sorted_nodes = sorted(scheduled_nodes, key=lambda x: -nodes_priority[self.get_node_name(x)])
+
+                # add nodes to queue
+                for node in sorted_nodes:
+                    if self.__can_run_node(node):
+                        run_queue.put(node)
+                        scheduled_nodes.remove(node)
+            
+            if run_queue.qsize() == 0:
+                #  find unfinished generator input with largest priority
+                max_priority = -1
+                max_node = None
+                for node_name in self.__nodes_with_unfinished_generator_outputs:
+                    node = self.get_node_by_name(node_name)
+                    if nodes_priority[node_name] > max_priority:
+                        max_priority = nodes_priority[node_name]
+                        max_node = node
+                
+                if max_node is not None:
+                    print(f"Adding node with unfinished generator output: {max_node}")
+                    run_queue.put(max_node)
+
+        
+        print("Finished running graph")
+        for node in self.__nodes_with_unfinished_generator_outputs:
+            print(f"Node with unfinished generator output: {node}")
+
+                
+
+    def run(self):
+        if self.__running:
+            return
+
+        self.__running = True
+        # self.__main_process = multiprocessing.Process(target=self.__run)
+
+        def run():
+            try:
+                self.on_graph_started.trigger()
+                self.__run()
+            except Exception as e:
+                self.on_error.trigger(e)
+            finally:
+                self.__running = False
+                self.on_graph_stopped.trigger()
+
+        self.__main_process = threading.Thread(target=run)
+        self.__main_process.start()
+
+    def stop(self):
+        if not self.__running:
+            return
+
+        self.__running = False
+
+    def kill(self):
+        if self.__main_process is not None:
+            self.__main_process.terminate()
+            self.__main_process = None 

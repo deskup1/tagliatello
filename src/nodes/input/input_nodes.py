@@ -6,7 +6,8 @@ from ...graph import (
     StringAttributeDefinition,
     FileAttributeDefinition,
     MultiFileAttributeDefinition,
-    BoolenAttributeDefinition
+    BoolenAttributeDefinition,
+    ListAttributeDefinition
 )
 
 import os
@@ -80,7 +81,7 @@ class StringListNode(BaseNode):
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": StringAttributeDefinition(list=True)}
+        return {"out": ListAttributeDefinition(StringAttributeDefinition())}
     
     @classmethod
     def name(cls) -> str:
@@ -217,7 +218,7 @@ class RangeNode(BaseNode):
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": IntegerAttributeDefinition(list=True)}
+        return {"out": ListAttributeDefinition(IntegerAttributeDefinition())}
     
 
     @classmethod

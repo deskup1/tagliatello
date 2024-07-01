@@ -42,7 +42,7 @@ class SplitLlmChatMessageNode(BaseNode):
     
     def __init__(self):
         super().__init__()
-        self.set_default_input("message", LlmChatMessage("", ""))
+        self.set_default_input("message", None)
 
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:

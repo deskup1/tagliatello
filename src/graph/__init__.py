@@ -9,5 +9,7 @@ from .node import (
     AnyAttributeDefinition,
     ComboAttributeDefinition,
     MultipleAttributeDefinition,
-    DictAttributeDefinition
+    DictAttributeDefinition,
+    ListAttributeDefinition,
 )
+from .node import DPG_DEFAULT_INPUT_WIDTH

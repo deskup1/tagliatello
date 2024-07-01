@@ -1,4 +1,4 @@
-from ...graph import AttributeDefinition, MultiFileAttributeDefinition, FloatAttributeDefinition, DictAttributeDefinition, StringAttributeDefinition
+from ...graph import AttributeDefinition, MultiFileAttributeDefinition, FloatAttributeDefinition, DictAttributeDefinition, StringAttributeDefinition, ListAttributeDefinition
 from ..progress_node import ProgressNode
 
 class TagImageNode(ProgressNode):
@@ -6,8 +6,8 @@ class TagImageNode(ProgressNode):
         super().__init__()
         self.__output_definitions = {
             "images": MultiFileAttributeDefinition(),
-            "tags": DictAttributeDefinition(StringAttributeDefinition(), FloatAttributeDefinition(), list=True),
-            "tags_string": StringAttributeDefinition(list=True),
+            "tags": ListAttributeDefinition(DictAttributeDefinition(StringAttributeDefinition(), FloatAttributeDefinition())),
+            "tags_string": ListAttributeDefinition(StringAttributeDefinition()),
         }
 
     @property
@@ -42,14 +42,6 @@ class TagImageNode(ProgressNode):
 
         for i, tags_dict in enumerate(tagger.tags(images)):
             tags.append(tags_dict)
-
-            if self.output_definitions["tags"].list == False:
-                self.set_progress(len(images), len(images))
-                return { 
-                    "tags" : tags[0], 
-                    "tags_string": [str(tag) for tag in tags[0]]
-                }
-            
             self.set_progress(i+1, len(images))
             
         self.set_progress(len(images), len(images))

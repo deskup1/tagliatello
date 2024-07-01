@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, FileAttributeDefinition, MultiFileAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, StringAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, ListAttributeDefinition, FileAttributeDefinition, MultiFileAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, StringAttributeDefinition
 import os
 from PIL import Image
 
@@ -56,7 +56,7 @@ class SaveToTextFilesNode(ProgressNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "texts": StringAttributeDefinition(list=True), 
+            "texts": ListAttributeDefinition(StringAttributeDefinition()), 
             "paths": MultiFileAttributeDefinition(),
             "mode": ComboAttributeDefinition(values_callback=lambda: ["overwrite", "append", "error if exists","skip if exists"])
             }

@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.0.6-alpha
+
+### Features
+- Added ability to duplicate nodes
+- Improved visual representation of nodes
+- Improved error visualization in nodes
+- List input/output attributes now support multiple different types of data
+- Added 'Unknown Node' which is used if the node is not found when loading a workflow
+- Added new category of nodes "Storage" which includes nodes for saving and loading data for different types of storage
+
+### Bug Fixes
+- Nodes now being added at mouse position
+- Fixed issue with linked 'Collector' and 'Iterator' nodes not working correctly
+- Fixed issue with nodes connected to 'Collector' inputs losing their data when the iterator is finished
+
+### Known Issues
+- Naming of categories and nodes might be misleading and will be changed in the future
+- Nodes can be connected in loop (which isn't supported)
+- Missing undo/redo functionality
+- Some nodes are not stopped immediately when the Stop button is pressed
+- Missing type checking for input/output attributes on multiple nodes
+
 ## v0.0.5-alpha
 
 ### Features

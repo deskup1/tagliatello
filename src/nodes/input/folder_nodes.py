@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, FileAttributeDefinition, StringAttributeDefinition, BoolenAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, ListAttributeDefinition, MultiFileAttributeDefinition, FileAttributeDefinition, StringAttributeDefinition, BoolenAttributeDefinition
 
 import os
 import pathlib
@@ -63,12 +63,12 @@ class InputFoldersNode(BaseNode):
     
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"paths": StringAttributeDefinition(list=True),
+        return {"paths": MultiFileAttributeDefinition(directory_selector=True),
                 "create_folders": BoolenAttributeDefinition()}
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"paths": StringAttributeDefinition(list=True)}
+        return {"paths": MultiFileAttributeDefinition(directory_selector=True)}
     
     @classmethod
     def name(cls) -> str:
@@ -118,13 +118,13 @@ class FilesFromFolderNode(BaseNode):
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
             "path": FileAttributeDefinition(directory_selector=True),
-            "allowed_extensions": StringAttributeDefinition(list=True),
+            "allowed_extensions": ListAttributeDefinition(StringAttributeDefinition()),
             "recursive": BoolenAttributeDefinition()
         }
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"files": StringAttributeDefinition(list=True)}
+        return {"files": ListAttributeDefinition(StringAttributeDefinition())}
     
     @classmethod
     def name(cls) -> str:
@@ -180,13 +180,13 @@ class MoveFilesToFolderNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
+            "files": MultiFileAttributeDefinition(),
             "folder": FileAttributeDefinition(directory_selector=True)
         }
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"files": StringAttributeDefinition(list=True)}
+        return {"files": MultiFileAttributeDefinition()}
     
     @classmethod
     def name(cls) -> str:
@@ -225,13 +225,13 @@ class CopyFilesToFolderNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True),
+            "files": MultiFileAttributeDefinition(),
             "folder": FileAttributeDefinition(directory_selector=True)
         }
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"files": StringAttributeDefinition(list=True)}
+        return {"files": MultiFileAttributeDefinition()}
     
     @classmethod
     def name(cls) -> str:
@@ -274,14 +274,14 @@ class FindDuplicateFilesNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "files": StringAttributeDefinition(list=True)
+            "files": MultiFileAttributeDefinition()
         }
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "remaining_files": StringAttributeDefinition(list=True),
-            "duplicates": StringAttributeDefinition(list=True)}
+            "remaining_files": MultiFileAttributeDefinition(),
+            "duplicates": MultiFileAttributeDefinition()}
     
     @classmethod
     def name(cls) -> str:

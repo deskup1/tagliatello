@@ -4,17 +4,19 @@ import os
 from typing import Callable
 import re
 import enum
+import copy
 
 class AttributeKind(enum.Enum):
     VALUE = 0
     EVENT = 1
     GENERATOR = 2
 
+DPG_DEFAULT_INPUT_WIDTH = 150
+
 class AttributeDefinition:
 
     def __init__(self, 
                  type_name:str|None=None,  
-                 list: bool = False, 
                  optional: bool = False,
                  kind: AttributeKind = AttributeKind.VALUE
                  ):
@@ -26,14 +28,12 @@ class AttributeDefinition:
         Args:
             type (AttributeType): type of the attribute
             type_name (str, optional): name of the custom type, used when type is AttributeType.CUSTOM. Defaults to None.
-            list (bool, optional): whether the attribute is a list. Defaults to False.
             kind (AttributeKind, optional): kind of the attribute. Defaults to AttributeKind.VALUE.
             file_select (bool, optional): if true, file select dialog will be shown when selecting the attribute. Defaults to False.
         '''
 
         self.type_name = type_name
         self.kind = kind
-        self.list = list
         self.optional = optional
 
     @property
@@ -49,9 +49,9 @@ class AttributeDefinition:
             return dpg.mvNode_PinShape_TriangleFilled 
         if self.kind == AttributeKind.EVENT:
             return dpg.mvNode_PinShape_Triangle
-        if self.list:
-            return dpg.mvNode_PinShape_QuadFilled if self.optional else dpg.mvNode_PinShape_Quad
-        return dpg.mvNode_PinShape_CircleFilled if self.optional else dpg.mvNode_PinShape_Circle
+        elif self.type_name.startswith("list") or self.type_name.startswith("dict") or self.type_name.startswith("tuple") or self.type_name.startswith("set") or self.type_name.startswith("image"):
+            return dpg.mvNode_PinShape_Quad if self.optional else dpg.mvNode_PinShape_QuadFilled
+        return dpg.mvNode_PinShape_Circle if self.optional else dpg.mvNode_PinShape_CircleFilled
 
     @property
     def color(self) -> tuple[int, int, int]:
@@ -93,23 +93,18 @@ class AttributeDefinition:
         '''
         if other.type_name == "any" or other.type_name == "any":
             return True
-        if self.list != other.list:
-            return False
         if self.type_name == other.type_name:
             return True
 
         return False
     
     def __str__(self):
-        if self.list:
-            return f"list[{self.type_name}]"
-        else:
-            return self.type_name
+        return self.type_name
         
     def __eq__(self, other):
         if not hasattr(other, "type_name") or not hasattr(other, "list") or not hasattr(other, "generator"):
             return False
-        return self.list == other.list and self.kind == other.kind and self.__str__() == other.__str__()
+        return self.kind == other.kind and self.__str__() == other.__str__()
     
     def show_ui(self, node: "BaseNode", attribute_name: str, dpg_type: int, parent:str|int):
         '''
@@ -140,13 +135,16 @@ class AttributeDefinition:
             node.set_default_output(attribute_name, value)
         else:
             node.set_static_input(attribute_name, value)
+
+    def copy(self):
+        return copy.deepcopy(self)
         
     
 class IntegerAttributeDefinition(AttributeDefinition):
-    def __init__(self, min_value: int|None=None, max_value: int|None=None, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
+    def __init__(self, min_value: int|None=None, max_value: int|None=None, kind: AttributeKind = AttributeKind.VALUE):
         self.min_value = min_value
         self.max_value = max_value
-        super().__init__(type_name="int", list=list, kind=kind)
+        super().__init__(type_name="int", kind=kind)
 
     def _format_input(self, input):
         return int(input) if input is not None else 0
@@ -155,8 +153,6 @@ class IntegerAttributeDefinition(AttributeDefinition):
         return int(output) if output is not None else 0
 
     def show_ui(self, node: "BaseNode", attribute_name: str, dpg_type: int, parent:str|int):
-        if self.list:
-            return dpg.add_text(f"{attribute_name}:{self}", parent=parent)
 
         min_value = self.min_value if self.min_value is not None else 0
         max_value = self.max_value if self.max_value is not None else 100
@@ -172,7 +168,7 @@ class IntegerAttributeDefinition(AttributeDefinition):
             input = dpg.add_input_int( 
                               min_value=min_value, min_clamped=min_clamped,
                               max_value=max_value, max_clamped=max_clamped,
-                              width=100, callback=on_input, default_value=self._format_output(default_value))
+                              width=DPG_DEFAULT_INPUT_WIDTH, callback=on_input, default_value=self._format_output(default_value))
             dpg.add_text(f"{attribute_name}:{self}")
 
 
@@ -187,10 +183,10 @@ class IntegerAttributeDefinition(AttributeDefinition):
         return group
 
 class FloatAttributeDefinition(AttributeDefinition):
-    def __init__(self, min_value: float|None=None, max_value: float|None=None, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
+    def __init__(self, min_value: float|None=None, max_value: float|None=None, kind: AttributeKind = AttributeKind.VALUE):
         self.min_value = min_value
         self.max_value = max_value
-        super().__init__(type_name="float", list=list, kind=kind)
+        super().__init__(type_name="float", kind=kind)
 
     def _format_input(self, input):
         return float(input) if input is not None else 0.0
@@ -199,9 +195,7 @@ class FloatAttributeDefinition(AttributeDefinition):
         return float(output) if output is not None else 0.0
 
     def show_ui(self, node: "BaseNode", attribute_name: str, dpg_type: int, parent:str|int):
-        if self.list:
-            return dpg.add_text(f"{attribute_name}:{self}", parent=parent)
-        
+
         min_value = self.min_value if self.min_value is not None else 0.0
         max_value = self.max_value if self.max_value is not None else 1.0
         min_clamped = True if self.min_value is not None else False
@@ -213,7 +207,7 @@ class FloatAttributeDefinition(AttributeDefinition):
         default_value = self._get_default_value(dpg_type, attribute_name, node)
         with dpg.group(horizontal=True, parent=parent) as group:
             input = dpg.add_input_float( 
-                                width=100, 
+                                width=DPG_DEFAULT_INPUT_WIDTH, 
                                 min_value=min_value, min_clamped=min_clamped,
                                 max_value=max_value, max_clamped=max_clamped,
                                 callback=on_input, 
@@ -229,18 +223,16 @@ class FloatAttributeDefinition(AttributeDefinition):
                 dpg.hide_item(input)
         
 class StringAttributeDefinition(AttributeDefinition):
-    def __init__(self, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
-        super().__init__(type_name="str", list=list, kind=kind)
+    def __init__(self, kind: AttributeKind = AttributeKind.VALUE):
+        super().__init__(type_name="str", kind=kind)
 
     def _format_input(self, input):
-        if input is None:
-            return "" if not self.list else []
-        return input.split("\n") if self.list else input
+        return input
     
     def _format_output(self, output):
         if output is None:
-            return "" if not self.list else []
-        return "\n".join(output) if self.list else output
+            return "" 
+        return output
 
     def show_ui(self, node: "BaseNode", attribute_name: str, dpg_type: int, parent:str|int):
         def on_input(sender, app_data):
@@ -250,7 +242,7 @@ class StringAttributeDefinition(AttributeDefinition):
         default_value = self._format_output(default_value)
 
         with dpg.group(horizontal=True, parent=parent) as group:
-            input = dpg.add_input_text(width=100, callback=on_input, default_value=default_value, multiline=self.list)
+            input = dpg.add_input_text(width=DPG_DEFAULT_INPUT_WIDTH, callback=on_input, default_value=default_value)
             dpg.add_text(f"{attribute_name}:{self}")
 
         if dpg_type == dpg.mvNode_Attr_Input:
@@ -273,7 +265,7 @@ class FileAttributeDefinition(AttributeDefinition):
         self.directory_selector = directory_selector
         self.initial_path = initial_path
         self.initial_file = initial_file
-        super().__init__(type_name="str", list=False, kind=AttributeKind.VALUE)
+        super().__init__(type_name="str", kind=AttributeKind.VALUE)
 
   
     def _on_file_select(self, sender, app_data, user_data):
@@ -316,14 +308,13 @@ class FileAttributeDefinition(AttributeDefinition):
 
         default_value = self._get_default_value(dpg_type, attribute_name, node)
 
-        with dpg.group(horizontal=True, parent=parent) as group:
+        with dpg.group(horizontal=True, parent=parent):
             uuid = dpg.generate_uuid()
             button = dpg.add_button(label="[/]", callback=show_file_dialog, user_data=(uuid, on_input))
-            input = dpg.add_input_text(width=100, 
+            input = dpg.add_input_text(width=DPG_DEFAULT_INPUT_WIDTH-30, 
                                        callback=on_input,
                                        tag=uuid, 
                                        default_value=self._format_output(default_value),
-                                       multiline=self.list
                                        )
             dpg.add_text(f"{attribute_name}:{self}")
 
@@ -338,50 +329,10 @@ class FileAttributeDefinition(AttributeDefinition):
                 dpg.hide_item(button)
                 dpg.hide_item(input)
         
-class MultiFileAttributeDefinition(FileAttributeDefinition):
-    def __init__(self,
-                    allowed_extensions = [".*"], 
-                    directory_selector=False,
-                    initial_path="",
-                    initial_file=".",
-                    ):
-        
-        super().__init__(allowed_extensions, directory_selector, initial_path, initial_file)
-        self.list = True
-
-    def _on_file_select(self, sender, app_data, user_data):
-        selections = app_data.get("selections", {}).items()
-
-        # get files from selections
-        files = [selection[1] for selection in selections]
-        formatted_files = []
-        
-        for file_path_name in files:
-            osdir = os.getcwd()
-
-            # if file is in the same directory as the project, then remove the path,
-            file_path_name = file_path_name.replace("\\", "/")
-            osdir = osdir.replace("\\", "/")
-            if file_path_name.startswith(osdir):
-                file_path_name = file_path_name[len(osdir)+1:]
-
-            formatted_files.append(file_path_name)
-
-        text = "\n".join(formatted_files)
-        dpg.set_value(user_data[0], text)
-
-        user_data[1](sender, text)
-        return
-    
-    def _format_input(self, input):
-        return input.split("\n") if input is not None else []
-    
-    def _format_output(self, output):
-        return "\n".join(output) if output is not None else ""
     
 class BoolenAttributeDefinition(AttributeDefinition):
-    def __init__(self, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
-        super().__init__(type_name="bool", list=list, kind=kind)
+    def __init__(self, kind: AttributeKind = AttributeKind.VALUE):
+        super().__init__(type_name="bool", kind=kind)
 
     def _format_input(self, input):
         return bool(input) if input is not None else False
@@ -411,8 +362,8 @@ class BoolenAttributeDefinition(AttributeDefinition):
         return group
 
 class AnyAttributeDefinition(AttributeDefinition):
-    def __init__(self, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
-        super().__init__(type_name="any", list=list, kind=kind)
+    def __init__(self, kind: AttributeKind = AttributeKind.VALUE):
+        super().__init__(type_name="any", kind=kind)
     
     def can_connect(self, other: AttributeDefinition):
         return True
@@ -420,8 +371,7 @@ class AnyAttributeDefinition(AttributeDefinition):
 class MultipleAttributeDefinition(AttributeDefinition):
     def __init__(self, types: list[AttributeDefinition],  kind: AttributeKind = AttributeKind.VALUE):
         self.types = types
-        list: bool = False,
-        super().__init__(type_name="multiple", list=list, kind=kind)
+        super().__init__(type_name="multiple", kind=kind)
     
     def can_connect(self, other: AttributeDefinition):
         if self.type_name == "any" or other.type_name == "any":
@@ -440,7 +390,7 @@ class ComboAttributeDefinition(AttributeDefinition):
     def __init__(self, values_callback: Callable[[], list[str]], allow_custom: bool = True):
         self.get_values = values_callback
         self.allow_custom = allow_custom
-        super().__init__(type_name="str", list=False, kind=AttributeKind.VALUE)
+        super().__init__(type_name="str", kind=AttributeKind.VALUE)
 
     def _format_input(self, input):
         return str(input)
@@ -475,8 +425,8 @@ class ComboAttributeDefinition(AttributeDefinition):
         default_value = self._get_default_value(dpg_type, attribute_name, node)
 
         with dpg.group(horizontal=True, parent=parent) as group:
-            dpg.add_combo(items=[default_value], callback=on_selection, default_value=default_value, tag=uuid, width=120, no_preview=self.allow_custom)
-            dpg.add_input_text(width=100, tag=text_uuid, callback=on_text, default_value=default_value, show=self.allow_custom)
+            dpg.add_combo(items=[default_value], callback=on_selection, default_value=default_value, tag=uuid, width=DPG_DEFAULT_INPUT_WIDTH, no_preview=self.allow_custom)
+            dpg.add_input_text(width=DPG_DEFAULT_INPUT_WIDTH-22, tag=text_uuid, callback=on_text, default_value=default_value, show=self.allow_custom)
             dpg.add_text(f"{attribute_name}:{self}")
 
 
@@ -499,18 +449,191 @@ class ComboAttributeDefinition(AttributeDefinition):
         
         return group
     
+
+class ListAttributeDefinition(AttributeDefinition):
+    def __init__(self, value_type: AttributeDefinition, kind: AttributeKind = AttributeKind.VALUE):
+        self.value_type = value_type
+        self.dummy_nodes: list[_DummyNode] = []
+        self.dpg_items = []
+        type_name = f"list[{value_type}]"
+        super().__init__(type_name=type_name, kind=kind)
+
+    MAX_LIST_LENGTH = 16
+
+    def can_connect(self, other: AttributeDefinition):
+        if other.type_name == "any":
+            return True
+        elif isinstance(other, ListAttributeDefinition):
+            return self.value_type.can_connect(other.value_type)
+        elif isinstance(other, MultiFileAttributeDefinition):
+            return self.value_type.can_connect(StringAttributeDefinition())
+        return super().can_connect(other)
+    
+    def __get_default_value_item(self, dpg_type, attribute_name, node, i):
+        default_value = self._get_default_value(dpg_type, attribute_name, node)
+        if default_value is None:
+            return None
+        elif not isinstance(default_value, list):
+            raise ValueError(f"Invalid default value for list attribute {attribute_name}. Expected list, got {type(default_value)}")
+        if i >= len(default_value):
+            return None
+        return default_value[i]
+    
+    def __set_default_value_item(self, dpg_type, attribute_name, node, i, value):
+        if isinstance(i, str):
+            i = re.sub(r'\D', '', i)
+            if i == "":
+                i = 0
+            i = int(i)
+
+        default_value = self._get_default_value(dpg_type, attribute_name, node)
+        if default_value is None:
+            default_value = []
+            self._set_default_value(dpg_type, attribute_name, node, default_value)
+        elif not isinstance(default_value, list):
+            raise ValueError(f"Invalid default value for list attribute {attribute_name}. Expected list, got {type(default_value)}")
+        while len(default_value) <= i:
+            raise ValueError(f"Invalid index for list attribute {attribute_name}. Expected index less than {len(default_value)}, got {i}")
+        default_value[i] = value
+    
+    def show_ui(self, node: "BaseNode", attribute_name: str, dpg_type: int, parent: str | int):
+
+        # check if value_attribute overrides show_ui
+        overriden = self.value_type.__class__.show_ui is not AttributeDefinition.show_ui
+        if not overriden:
+            return super().show_ui(node, attribute_name, dpg_type, parent)
+
+        if dpg_type == dpg.mvNode_Attr_Output and attribute_name not in node.default_outputs:
+            return super().show_ui(node, attribute_name, dpg_type, parent)
+        
+        default_value = self._get_default_value(dpg_type, attribute_name, node)
+        length = 0
+        if default_value is None:
+            length = 0
+        elif not isinstance(default_value, list):
+            raise ValueError(f"Invalid default value for list attribute {attribute_name}. Expected list, got {type(length)}")
+        else:
+            length = len(default_value)
+
+        def on_count_changed(sender, app_data):
+            count = dpg.get_value(sender)
+            default_value = self._get_default_value(dpg_type, attribute_name, node)
+            if default_value is None:
+                default_value = []
+                self._set_default_value(dpg_type, attribute_name, node, default_value)
+            elif not isinstance(default_value, list):
+                raise ValueError(f"Invalid default value for list attribute {attribute_name}. Expected list, got {type(default_value)}")
+            while len(default_value) <= count:
+                default_value.append(None)
+            while len(default_value) > count:
+                default_value.pop()
+
+            # hide or show dummy nodes
+            for i in range(self.MAX_LIST_LENGTH):
+                if i < count:
+                    dpg.show_item(self.dpg_items[i])
+                    dummy_node = self.dummy_nodes[i]
+                    default_value[i] = self._get_default_value(dpg_type, dummy_node.key, dummy_node)
+                else:
+                    dpg.hide_item(self.dpg_items[i])
+
+            self._set_default_value(dpg_type, attribute_name, node, default_value)
+
+        with dpg.group(parent=parent) as group:
+            dpg.add_text(f"{attribute_name}:{self}")
+            with dpg.group(label=f"{attribute_name}:{self}") as inner_group:
+                dpg.add_input_int(label=f"List count", width=DPG_DEFAULT_INPUT_WIDTH, default_value=length, max_value=16, min_value=0, min_clamped=True, max_clamped=True, callback=on_count_changed)
+                for i in range(self.MAX_LIST_LENGTH):
+                    label = f"{attribute_name}[{i}]"
+                    dummy_node = _DummyNode(label, self.__get_default_value_item(dpg_type, attribute_name, node, i))
+                    dummy_node._on_default_input_changed += lambda key, value: self.__set_default_value_item(dpg_type, attribute_name, node, key, value)
+                    dummy_node._on_default_output_changed += lambda key, value: self.__set_default_value_item(dpg_type, attribute_name, node, key, value)
+                    dummy_node._on_static_input_changed += lambda key, value: self.__set_default_value_item(dpg_type, attribute_name, node, key, value)
+                    self.dummy_nodes.append(dummy_node)
+                    ui = self.value_type.show_ui(dummy_node, label, dpg_type, group)
+
+                    self.dpg_items.append(ui)
+                    if i >= length:
+                        dpg.hide_item(ui)
+
+        if dpg_type == dpg.mvNode_Attr_Input:
+            node._on_input_connected += lambda input_name, _, __: dpg.hide_item(inner_group) if input_name == attribute_name else None
+            node._on_input_disconnected += lambda input_name, _, __: dpg.show_item(inner_group) if input_name == attribute_name else None
+
+        elif dpg_type == dpg.mvNode_Attr_Output:
+            if attribute_name not in node.default_outputs:
+                dpg.hide_item(group)
+
+        return group
+
+    @property
+    def shape(self):
+        return dpg.mvNode_PinShape_Quad if self.optional else dpg.mvNode_PinShape_QuadFilled
+
+class MultiFileAttributeDefinition(FileAttributeDefinition):
+    def __init__(self,
+                    allowed_extensions = [".*"], 
+                    directory_selector=False,
+                    initial_path="",
+                    initial_file=".",
+                    ):
+        
+        super().__init__(allowed_extensions, directory_selector, initial_path, initial_file)
+        self.type_name = "list[str]"
+
+    def _on_file_select(self, sender, app_data, user_data):
+        selections = app_data.get("selections", {}).items()
+
+        # get files from selections
+        files = [selection[1] for selection in selections]
+        formatted_files = []
+        
+        for file_path_name in files:
+            osdir = os.getcwd()
+
+            # if file is in the same directory as the project, then remove the path,
+            file_path_name = file_path_name.replace("\\", "/")
+            osdir = osdir.replace("\\", "/")
+            if file_path_name.startswith(osdir):
+                file_path_name = file_path_name[len(osdir)+1:]
+
+            formatted_files.append(file_path_name)
+
+        text = "\n".join(formatted_files)
+        dpg.set_value(user_data[0], text)
+
+        user_data[1](sender, text)
+        return
+    
+    def _format_input(self, input):
+        return input.split(",") if input is not None else []
+    
+    def _format_output(self, output):
+        return ",".join(output) if output is not None else ""
+    
+    @property
+    def shape(self):
+        return dpg.mvNode_PinShape_Quad if self.optional else dpg.mvNode_PinShape_QuadFilled
+    
+    def can_connect(self, other: AttributeDefinition):
+        if other.type_name == "any":
+            return True
+        elif isinstance(other, MultiFileAttributeDefinition):
+            return True
+        elif isinstance(other, ListAttributeDefinition):
+            return other.can_connect(ListAttributeDefinition(StringAttributeDefinition()))
+        return super().can_connect(other)
+
 class DictAttributeDefinition(AttributeDefinition):
-    def __init__(self, key_type: AttributeDefinition, value_type: AttributeDefinition, list: bool = False, kind: AttributeKind = AttributeKind.VALUE):
+    def __init__(self, key_type: AttributeDefinition, value_type: AttributeDefinition, kind: AttributeKind = AttributeKind.VALUE):
         self.key_type = key_type
         self.value_type = value_type
         type_name = f"dict[{key_type},{value_type}]"
-        super().__init__(type_name=type_name, list=list, kind=kind)
+        super().__init__(type_name=type_name, kind=kind)
 
     def can_connect(self, other: AttributeDefinition):
         if self.type_name == "any" or other.type_name == "any":
             return True
-        if other.list != self.list:
-            return False
         elif isinstance(other, DictAttributeDefinition):
             return self.key_type.can_connect(other.key_type) and self.value_type.can_connect(other.value_type)
         return super().can_connect(other)
@@ -927,6 +1050,41 @@ class BaseNode:
         def __init__(self):
             pass
 
+        def __eq__(self, other):
+            return isinstance(other, self.__class__)
+
     class GeneratorContinue():
         def __init__(self):
             pass
+
+        def __eq__(self, other):
+            return isinstance(other, self.__class__)
+
+
+class _DummyNode(BaseNode):
+    def __init__(self, key, value):
+        self.key = key
+        super().__init__()
+
+        self._on_static_input_changed = BaseNodeEvent()
+        self._on_default_input_changed = BaseNodeEvent()
+        self._on_default_output_changed = BaseNodeEvent()
+
+        self.set_static_input(key, value)
+        self.set_default_input(key, value)
+        self.set_default_output(key, value)
+
+    def set_static_input(self, input_name: str, value):
+        self._on_static_input_changed.trigger(input_name, value)
+        self.static_inputs[input_name] = value
+
+    def set_default_input(self, input_name: str, value):
+        self._on_default_input_changed.trigger(input_name, value)
+        self.default_inputs[input_name] = value
+
+    def set_default_output(self, output_name: str, value):
+        self._on_default_output_changed.trigger(output_name, value)
+        self.default_outputs[output_name] = value
+
+    def run(self):
+        raise NotImplementedError()
