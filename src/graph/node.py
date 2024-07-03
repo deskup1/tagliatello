@@ -649,10 +649,12 @@ class BaseNodeEvent:
         self.callbacks = []
 
     def register(self, callback: callable):
-        self.callbacks.append(callback)
+        if callback not in self.callbacks:
+            self.callbacks.append(callback)
 
     def unregister(self, callback: callable):
-        self.callbacks.remove(callback)
+        if callback in self.callbacks:
+            self.callbacks.remove(callback)
 
     def trigger(self, *args, **kwargs):
         for callback in self.callbacks:

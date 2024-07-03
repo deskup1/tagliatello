@@ -61,7 +61,7 @@ class Graph:
 
         self.__max_concurrency = 10
 
-        self.__run_results = {}
+        self._run_results = {}
         self.__nodes_with_unfinished_generator_inputs = set()
         self.__nodes_with_unfinished_generator_outputs = set()
 
@@ -69,7 +69,7 @@ class Graph:
         self.__main_process = None
 
 
-    def  is_running(self) -> bool:
+    def is_running(self) -> bool:
         return self.__running
 
     def register_nodes(self, nodes: list[BaseNode]):
@@ -271,7 +271,7 @@ class Graph:
         self.connections = {}
 
         self.__running = False
-        self.__run_results = {}
+        self._run_results = {}
         self.__nodes_with_unfinished_generator_inputs = set()
         self.__nodes_with_unfinished_generator_outputs = set()
 
@@ -370,12 +370,12 @@ class Graph:
         input_data = node.default_inputs.copy()
         for connection in self.get_input_connections_for_node(node):
 
-            output_data = self.__run_results.get(connection.output_node_name, None)
+            output_data = self._run_results.get(connection.output_node_name, None)
 
-            if connection.output_node_name in self.__run_results and len(output_data) == 0:
+            if connection.output_node_name in self._run_results and len(output_data) == 0:
                 self.__run_node(self.get_node_by_name(connection.output_node_name))
 
-            output_data = self.__run_results.get(connection.output_node_name, {}).get(connection.output_name, BaseNode.GeneratorExit())
+            output_data = self._run_results.get(connection.output_node_name, {}).get(connection.output_name, BaseNode.GeneratorExit())
             input_data[connection.input_name] = output_data
 
 
@@ -384,7 +384,7 @@ class Graph:
 
         # run node
         result = node.run(**input_data)
-        self.__run_results[node_name] = result
+        self._run_results[node_name] = result
 
         for name, definition in node.output_definitions.items():
             if definition.kind == AttributeKind.GENERATOR:
@@ -406,7 +406,7 @@ class Graph:
         # clear non cacheable input nodes
         for connection in self.get_input_connections_for_node(node):
             if not self.get_node_by_name(connection.output_node_name).cache:
-                self.__run_results[connection.output_node_name] = {}
+                self._run_results[connection.output_node_name] = {}
                 print(f"Clearing node {connection.output_node_name}")
 
         return result
@@ -420,7 +420,7 @@ class Graph:
             if definition.kind == AttributeKind.EVENT:
                 continue
 
-            if connection.output_node_name not in self.__run_results:
+            if connection.output_node_name not in self._run_results:
                 if not output_node.cache:
                     can_run_output_node = self.__can_run_node(output_node)
                     if not can_run_output_node:
@@ -431,11 +431,11 @@ class Graph:
                 else:
                     print(f"Cant run node {input_node} because output node {output_node} is not in run results")
                     return False
-            if connection.output_name not in self.__run_results[connection.output_node_name]:
+            if connection.output_name not in self._run_results[connection.output_node_name]:
                 print(f"Cant run node {input_node} because output name {connection.output_name} is not in run results")
                 return False
             
-            node_value = self.__run_results[connection.output_node_name][connection.output_name]
+            node_value = self._run_results[connection.output_node_name][connection.output_name]
             if node_value == BaseNode.GeneratorExit() or node_value == BaseNode.GeneratorContinue():
                 print(f"Cant run node {input_node} because output node {connection.output_node_name} is generator exit or continue")
                 return False
