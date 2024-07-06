@@ -275,7 +275,6 @@ class Graph:
         self.__nodes_with_unfinished_generator_inputs = set()
         self.__nodes_with_unfinished_generator_outputs = set()
 
-        # run_data lock
 
 
     def save_to_file(self, file_path: str):
@@ -364,7 +363,6 @@ class Graph:
         
        
         node_name = self.get_node_name(node)
-        print(f"Running node: {node_name}")
 
         # get input data
         input_data = node.default_inputs.copy()
@@ -407,7 +405,6 @@ class Graph:
         for connection in self.get_input_connections_for_node(node):
             if not self.get_node_by_name(connection.output_node_name).cache:
                 self._run_results[connection.output_node_name] = {}
-                print(f"Clearing node {connection.output_node_name}")
 
         return result
 
@@ -424,20 +421,16 @@ class Graph:
                 if not output_node.cache:
                     can_run_output_node = self.__can_run_node(output_node)
                     if not can_run_output_node:
-                        print(f"Cant run node {input_node} because output node {output_node} cant run")
                         return False
                     continue
 
                 else:
-                    print(f"Cant run node {input_node} because output node {output_node} is not in run results")
                     return False
             if connection.output_name not in self._run_results[connection.output_node_name]:
-                print(f"Cant run node {input_node} because output name {connection.output_name} is not in run results")
                 return False
             
             node_value = self._run_results[connection.output_node_name][connection.output_name]
             if node_value == BaseNode.GeneratorExit() or node_value == BaseNode.GeneratorContinue():
-                print(f"Cant run node {input_node} because output node {connection.output_node_name} is generator exit or continue")
                 return False
             
         return True
@@ -522,20 +515,22 @@ class Graph:
                         max_node = node
                 
                 if max_node is not None:
-                    print(f"Adding node with unfinished generator output: {max_node}")
                     run_queue.put(max_node)
 
-        
-        print("Finished running graph")
-        for node in self.__nodes_with_unfinished_generator_outputs:
-            print(f"Node with unfinished generator output: {node}")
 
-                
+    
 
     def run(self):
         if self.__running:
-            return
-
+            raise GraphException("Graph is already running")
+        
+        if self.__main_process is not None:
+            if self.__main_process.is_alive():
+                raise GraphException("Graph is already running")
+            
+        self._run_results = {}
+        self.__nodes_with_unfinished_generator_inputs = set()
+        self.__nodes_with_unfinished_generator_outputs = set()
         self.__running = True
         # self.__main_process = multiprocessing.Process(target=self.__run)
 
@@ -546,8 +541,11 @@ class Graph:
             except Exception as e:
                 self.on_error.trigger(e)
             finally:
-                self.__running = False
                 self.on_graph_stopped.trigger()
+                self._run_results = {}
+                self.__running = False
+                self.__nodes_with_unfinished_generator_inputs = set()
+                self.__nodes_with_unfinished_generator_outputs = set()
 
         self.__main_process = threading.Thread(target=run)
         self.__main_process.start()
@@ -555,7 +553,7 @@ class Graph:
     def stop(self):
         if not self.__running:
             return
-
+        
         self.__running = False
 
     def kill(self):

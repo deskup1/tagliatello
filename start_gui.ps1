@@ -20,31 +20,11 @@ Write-Host "--------------------------------------------------------------------
 
 # check if virtual environment folder is not present
 if (-not (Test-Path $venv)) {
-    # print nice message
-
     Write-Host "Welcome to the Tagiatello installation script!"
     Write-Host "----------------------------------------------------------------------"
-
-    # ask if should install gpu version
-    $gpu = Read-Host "Please, specify which version you want to install (cpu/gpu) or press enter to choose default (gpu)"
-
-    if ($gpu -eq "cpu") {
-        $mode = "cpu"
-    } else {
-        $mode = "gpu"
-    }
-    Write-Host "Selected mode: $mode"
-    Write-Host "--------------------------------------------------------------------"
     Write-Host "Creating virtual environment..."
     python -m venv venv
     .\venv\Scripts\Activate.ps1
-    Write-Host "--------------------------------------------------------------------"
-    Write-Host "Installing torch and torchvision..."
-    if ($mode -eq "gpu") {
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-    } else {
-        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-    }
     Write-Host "--------------------------------------------------------------------"
     Write-Host "Installing other dependencies..."
     pip install -r requirements.txt
@@ -52,12 +32,7 @@ if (-not (Test-Path $venv)) {
     Write-Host "Installation completed! Starting the application..."
     python main.py
 } else {
-
-
     Write-Host "Virtual environment already exists. Starting the application..."
     .\venv\Scripts\Activate.ps1
     python main.py
 }
-
-
-

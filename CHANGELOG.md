@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.0.8-alpha
+
+### Features
+- Added support for `Florence 2` models
+- Added new `Display Text` and `Display Image` nodes for displaying text and images in the app
+- `Display` node now deprecated
+- First install don't need building using `wheel` anymore for python 3.10 and 3.11
+
+### Bug Fixes
+- Fixed issue with `Display` node showing stretched images
+
+### Known Issues
+- Naming of categories and nodes might be misleading and will be changed in the future
+- Nodes can be connected in loop (which isn't supported)
+- Missing undo/redo functionality
+- Some nodes are not stopped immediately when the Stop button is pressed
+- Missing type checking for input/output attributes on multiple nodes
+
+## v0.0.7-alpha
+
+### Features
+- Added new `Graph node` which allows for using existing workflows as individual nodes
+
+### Known Issues
+- Naming of categories and nodes might be misleading and will be changed in the future
+- Nodes can be connected in loop (which isn't supported)
+- Missing undo/redo functionality
+- Some nodes are not stopped immediately when the Stop button is pressed
+- Missing type checking for input/output attributes on multiple nodes
+
 ## v0.0.6-alpha
 
 ### Features

@@ -1,0 +1,245 @@
+connections:
+  Display Image 1.images -> Florence 2 Model Caption 0.images:
+    input_name: images
+    input_node_name: Florence 2 Model Caption 0
+    output_name: images
+    output_node_name: Display Image 1
+  Display Image 1.images -> Florence 2 Model Region Detection 0.images:
+    input_name: images
+    input_node_name: Florence 2 Model Region Detection 0
+    output_name: images
+    output_node_name: Display Image 1
+  Display Text 0.out -> Florence 2 Model Caption Grounding 0.captions:
+    input_name: captions
+    input_node_name: Florence 2 Model Caption Grounding 0
+    output_name: out
+    output_node_name: Display Text 0
+  Draw Bounding Box 0.images -> Display Image 0.images:
+    input_name: images
+    input_node_name: Display Image 0
+    output_name: images
+    output_node_name: Draw Bounding Box 0
+  Draw Bounding Box 0.labels -> Display Text 1.in:
+    input_name: in
+    input_node_name: Display Text 1
+    output_name: labels
+    output_node_name: Draw Bounding Box 0
+  Draw Bounding Box 1.images -> Display Image 2.images:
+    input_name: images
+    input_node_name: Display Image 2
+    output_name: images
+    output_node_name: Draw Bounding Box 1
+  Draw Bounding Box 1.labels -> Display Text 2.in:
+    input_name: in
+    input_node_name: Display Text 2
+    output_name: labels
+    output_node_name: Draw Bounding Box 1
+  Florence 2 Model 0.model -> Florence 2 Model Caption 0.model:
+    input_name: model
+    input_node_name: Florence 2 Model Caption 0
+    output_name: model
+    output_node_name: Florence 2 Model 0
+  Florence 2 Model 0.model -> Florence 2 Model Region Detection 0.model:
+    input_name: model
+    input_node_name: Florence 2 Model Region Detection 0
+    output_name: model
+    output_node_name: Florence 2 Model 0
+  Florence 2 Model Caption 0.captions -> Display Text 0.in:
+    input_name: in
+    input_node_name: Display Text 0
+    output_name: captions
+    output_node_name: Florence 2 Model Caption 0
+  Florence 2 Model Caption 0.images -> Florence 2 Model Caption Grounding 0.images:
+    input_name: images
+    input_node_name: Florence 2 Model Caption Grounding 0
+    output_name: images
+    output_node_name: Florence 2 Model Caption 0
+  Florence 2 Model Caption 0.model -> Florence 2 Model Caption Grounding 0.model:
+    input_name: model
+    input_node_name: Florence 2 Model Caption Grounding 0
+    output_name: model
+    output_node_name: Florence 2 Model Caption 0
+  Florence 2 Model Caption Grounding 0.bboxes -> Draw Bounding Box 0.bboxes:
+    input_name: bboxes
+    input_node_name: Draw Bounding Box 0
+    output_name: bboxes
+    output_node_name: Florence 2 Model Caption Grounding 0
+  Florence 2 Model Caption Grounding 0.bboxes_labels -> Draw Bounding Box 0.labels:
+    input_name: labels
+    input_node_name: Draw Bounding Box 0
+    output_name: bboxes_labels
+    output_node_name: Florence 2 Model Caption Grounding 0
+  Florence 2 Model Caption Grounding 0.images -> Draw Bounding Box 0.images:
+    input_name: images
+    input_node_name: Draw Bounding Box 0
+    output_name: images
+    output_node_name: Florence 2 Model Caption Grounding 0
+  Florence 2 Model Region Detection 0.bboxes -> Draw Bounding Box 1.bboxes:
+    input_name: bboxes
+    input_node_name: Draw Bounding Box 1
+    output_name: bboxes
+    output_node_name: Florence 2 Model Region Detection 0
+  Florence 2 Model Region Detection 0.bboxes_labels -> Draw Bounding Box 1.labels:
+    input_name: labels
+    input_node_name: Draw Bounding Box 1
+    output_name: bboxes_labels
+    output_node_name: Florence 2 Model Region Detection 0
+  Florence 2 Model Region Detection 0.images -> Draw Bounding Box 1.images:
+    input_name: images
+    input_node_name: Draw Bounding Box 1
+    output_name: images
+    output_node_name: Florence 2 Model Region Detection 0
+  Input Files 0.paths -> Display Image 1.images:
+    input_name: images
+    input_node_name: Display Image 1
+    output_name: paths
+    output_node_name: Input Files 0
+nodes:
+  Display Image 0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2022
+      - -1
+    static_inputs: {}
+    type: Display Image
+  Display Image 1:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 227
+      - 271
+    static_inputs: {}
+    type: Display Image
+  Display Image 2:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1602
+      - 598
+    static_inputs: {}
+    type: Display Image
+  Display Text 0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 878
+      - 428
+    static_inputs: {}
+    type: Display Text
+  Display Text 1:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 2017
+      - 433
+    static_inputs: {}
+    type: Display Text
+  Display Text 2:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 1592
+      - 1029
+    static_inputs: {}
+    type: Display Text
+  Draw Bounding Box 0:
+    default_inputs:
+      bboxes: []
+      images: []
+      labels: []
+    default_outputs: {}
+    metadata:
+      position:
+      - 1633
+      - 149
+    static_inputs: {}
+    type: Draw Bounding Box
+  Draw Bounding Box 1:
+    default_inputs:
+      bboxes: []
+      images: []
+      labels: []
+    default_outputs: {}
+    metadata:
+      position:
+      - 1211
+      - 763
+    static_inputs: {}
+    type: Draw Bounding Box
+  Florence 2 Model 0:
+    default_inputs: {}
+    default_outputs: {}
+    metadata:
+      position:
+      - 243
+      - 17
+    static_inputs:
+      cache_dir: hf_cache
+      device: cuda:0
+      model: microsoft/Florence-2-large
+      precision: fp16
+    type: Florence 2 Model
+  Florence 2 Model Caption 0:
+    default_inputs:
+      batch_size: 1
+      images: []
+      max_new_tokens: 1024
+      model: null
+      num_beams: 3
+      type: <MORE_DETAILED_CAPTION>
+    default_outputs: {}
+    metadata:
+      position:
+      - 632
+      - 75
+    static_inputs: {}
+    type: Florence 2 Model Caption
+  Florence 2 Model Caption Grounding 0:
+    default_inputs:
+      batch_size: 1
+      captions: []
+      images: []
+      max_new_tokens: 1024
+      model: null
+      num_beams: 3
+      type: <CAPTION_TO_PHRASE_GROUNDING>
+    default_outputs: {}
+    metadata:
+      position:
+      - 1252
+      - 60
+    static_inputs: {}
+    type: Florence 2 Model Caption Grounding
+  Florence 2 Model Region Detection 0:
+    default_inputs:
+      batch_size: 1
+      images: []
+      max_new_tokens: 1024
+      model: null
+      num_beams: 3
+      type: <OD>
+    default_outputs: {}
+    metadata:
+      position:
+      - 786
+      - 730
+    static_inputs: {}
+    type: Florence 2 Model Region Detection
+  Input Files 0:
+    default_inputs: {}
+    default_outputs:
+      paths:
+      - example-workflows/example-images/example1.jpg
+    metadata:
+      position:
+      - -131
+      - 270
+    static_inputs: {}
+    type: Input Files

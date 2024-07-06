@@ -1,15 +1,39 @@
 import os
-from PIL.Image import Image
+from PIL import Image
 import base64
 from io import BytesIO
+import re
+from ...helpers import convert_base64_to_pil
 
 class LlmChatMessage:
-    def __init__(self, role: str, text: str, image: str|Image|None = None):
+    def __init__(self, role: str, text: str, image: str|Image.Image|None = None):
         self.role: str = role
         self.text: str = text
-        self.image: str| None = self.__convert_image_to_base64(image)
+        self.image: str|Image.Image|None= image
 
-    def __convert_image_to_base64(self, image: str|Image) -> str|None:
+    @property
+    def base64_image(self) -> str|None:
+        self.__convert_image_to_base64(self.image)
+
+    @property
+    def pil_image(self) -> Image.Image|None:
+        self.__convert_to_pil_image(self.image)
+
+    def __convert_to_pil_image(self, image: str|Image.Image) -> Image.Image | None:
+        if image is None or image == "":
+            return None
+        elif isinstance(image, str):
+            if image.startswith("data:image"):
+                return convert_base64_to_pil(image)
+            elif not os.path.exists(image):
+                raise ValueError(f"Image '{image}' does not exist")
+            return Image.open(image)
+        elif isinstance(image, Image.Image):
+            return image
+        else:
+            raise ValueError(f"Invalid image type '{type(image)}'")
+
+    def __convert_image_to_base64(self, image: str|Image.Image) -> str|None:
         if image is None or image == "":
             return None
         elif isinstance(image, str):

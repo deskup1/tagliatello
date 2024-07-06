@@ -7,8 +7,27 @@ import base64
 from io import BytesIO
 import numpy
 import re
-
+import requests
+import os
 default_thumbnail_size = (150, 150)
+
+
+def pillow_from_any_string(image: str) -> PIL.Image.Image | None:
+    if image.startswith("data:image"):
+        return convert_base64_to_pil(image)
+    elif image.startswith("http"):
+        return convert_http_to_pil(image)
+    elif os.path.exists(image):
+        return convert_path_to_pil(image)
+    else:
+        return None
+
+def convert_path_to_pil(path: str) -> PIL.Image.Image:
+    return Image.open(path)
+
+def convert_http_to_pil(url: str) -> PIL.Image.Image:
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
 
 def convert_base64_to_pil(base64_image: str) -> PIL.Image.Image:
     base64_image = re.sub('^data:image/.+;base64,', '', base64_image)
@@ -18,12 +37,18 @@ def convert_base64_to_pil(base64_image: str) -> PIL.Image.Image:
 
 
 def convert_to_thumbnail(pillow_image: PIL.Image.Image, size=default_thumbnail_size) -> PIL.Image.Image:
-    # scale to 150x150
+    
     pillow_image.thumbnail(size)
+    background = PIL.Image.new('RGBA', size, (0, 0, 0, 255))
+    background.paste(pillow_image, (int((size[0] - pillow_image.size[0]) / 2), int((size[1] - pillow_image.size[1]) / 2)))
+    return background
+    
+    # scale to 150x150
+    # pillow_image.thumbnail(size)
     # set alpha channel to 255
-    pillow_image.putalpha(255)
+    # pillow_image.putalpha(255)
     # convert to png
-    pillow_image = pillow_image.convert("RGBA")
+    # pillow_image = pillow_image.convert("RGBA")
   
     return pillow_image
 

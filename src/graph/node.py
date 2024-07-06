@@ -269,7 +269,14 @@ class FileAttributeDefinition(AttributeDefinition):
 
   
     def _on_file_select(self, sender, app_data, user_data):
-        file_path_name: str = app_data.get("file_path_name", "")
+        print(app_data)
+        selections: str = app_data.get("selections", "")
+        # iterate over selections dict, get first value
+        file_path_name = ""
+        for path_name in selections.values():
+            file_path_name = path_name
+            break
+
         osdir = os.getcwd()
 
         # if file is in the same directory as the project, then remove the path,
@@ -582,10 +589,10 @@ class MultiFileAttributeDefinition(FileAttributeDefinition):
         self.type_name = "list[str]"
 
     def _on_file_select(self, sender, app_data, user_data):
-        selections = app_data.get("selections", {}).items()
+        selections = app_data.get("selections", {}).values()
 
         # get files from selections
-        files = [selection[1] for selection in selections]
+        files = [selection for selection in selections]
         formatted_files = []
         
         for file_path_name in files:
@@ -599,7 +606,7 @@ class MultiFileAttributeDefinition(FileAttributeDefinition):
 
             formatted_files.append(file_path_name)
 
-        text = "\n".join(formatted_files)
+        text = ",".join(formatted_files)
         dpg.set_value(user_data[0], text)
 
         user_data[1](sender, text)

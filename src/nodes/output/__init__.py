@@ -1,4 +1,4 @@
-from .miscellaneous_nodes import DisplayNode, WaitNode
+from .miscellaneous_nodes import DisplayNode, WaitNode, DisplayText, DisplayImage, DrawBbox, ImagesThumbnail, ImageThumbnail
 from .file_nodes import CopyFileNode, MoveFileNode, SaveToImageFileNode, CopyFilesNode, MoveFilesNode, SaveToTextFileNode, SaveToTextFilesNode
 
 def register_nodes():
@@ -11,5 +11,10 @@ def register_nodes():
         MoveFilesNode,
         SaveToTextFileNode,
         SaveToTextFilesNode,
-        SaveToImageFileNode
+        SaveToImageFileNode,
+        DisplayText,
+        DisplayImage,
+        DrawBbox,
+        ImagesThumbnail,
+        ImageThumbnail
         ]

@@ -25,7 +25,7 @@ import src.update as update
 
 from src.settings import SETTINGS
 
-DEBUG = True
+DEBUG = False
 
 dpg.create_context()
 dpg.configure_app(manual_callback_management=DEBUG)

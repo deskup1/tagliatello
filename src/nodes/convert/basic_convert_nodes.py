@@ -1,5 +1,5 @@
-from ...graph import BaseNode, AttributeKind, AttributeDefinition, ListAttributeDefinition ,IntegerAttributeDefinition, AnyAttributeDefinition, FloatAttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition
-import copy
+from ...graph import BaseNode, AttributeKind, AttributeDefinition, ListAttributeDefinition ,IntegerAttributeDefinition, AnyAttributeDefinition, FloatAttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition, DPG_DEFAULT_INPUT_WIDTH
+import dearpygui.dearpygui as dpg
 
 class ToAnyNode(BaseNode):
     def __init__(self):
@@ -29,29 +29,46 @@ class ToListNode(BaseNode):
     def __init__(self):
         super().__init__()
         self.set_default_input("in", 0)
+        self.set_static_input("count", 1)
 
         self.__output_definitions = {"out": ListAttributeDefinition(AnyAttributeDefinition())}
+        self.__input_definitions = {"in[0]": AnyAttributeDefinition()}
 
-        self._on_input_connected += self.__change_output_definition_on_connect
-        self._on_input_disconnected += self.__change_output_definition_on_disconnect
-
-    def __change_output_definition_on_connect(self, input_name: str, output_node: BaseNode, output_name: str):
-        definition = output_node.output_definitions.get(output_name, AnyAttributeDefinition())
-        self.__output_definitions["out"] = definition.copy()
-        self.__output_definitions["out"].kind = AttributeKind.VALUE
-        self.refresh_ui()
-
-    def __change_output_definition_on_disconnect(self, _, __, ___):
-        self.__output_definitions["out"] = ListAttributeDefinition(AnyAttributeDefinition())
-        self.refresh_ui()
     
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"in": AnyAttributeDefinition()}
+        return self.__input_definitions
     
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
         return self.__output_definitions
+    
+    def load_from_dict(self, data: dict):
+        super().load_from_dict(data)
+        count = self.static_inputs.get("count", 1)
+        for i in range(count):
+            self.__input_definitions[f"in[{i}]"] = AnyAttributeDefinition()
+        self.refresh_ui()
+    
+    def __on_count_changed(self, sender: int, app_data: str):
+        self.set_static_input("count", int(app_data))
+        count = int(app_data)
+        self.__input_definitions = {}
+        for i in range(count):
+            self.__input_definitions[f"in[{i}]"] = AnyAttributeDefinition()
+        self.refresh_ui()
+    
+    def show_custom_ui(self, parent: int | str):
+        super().show_custom_ui(parent)
+        dpg.add_input_int(
+            label="Count", 
+            default_value=self.static_inputs.get("count"), 
+            callback=self.__on_count_changed, min_value=0, 
+            min_clamped=True, 
+            max_value=16, 
+            max_clamped=True,
+            width=DPG_DEFAULT_INPUT_WIDTH
+            )
     
     @classmethod
     def name(cls) -> str:
@@ -62,7 +79,9 @@ class ToListNode(BaseNode):
         return "Convert"
     
     def run(self, **kwargs) -> dict:
-        return {"out": [kwargs.get("in", 0)]}
+        count = self.static_inputs.get("count", 1)
+        in_data = [kwargs.get(f"in[{i}]", None) for i in range(count)]
+        return {"out": in_data}
 
 class ToIntegerNode(BaseNode):
     def __init__(self):
