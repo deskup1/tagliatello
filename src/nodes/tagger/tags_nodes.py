@@ -1,6 +1,9 @@
 from ...graph import BaseNode, ListAttributeDefinition, AttributeDefinition, BoolenAttributeDefinition, StringAttributeDefinition, DictAttributeDefinition, FloatAttributeDefinition, ComboAttributeDefinition, MultiFileAttributeDefinition
 import os
+import dearpygui.dearpygui as dpg
 
+def normalize_tag(tag: str) -> str:
+    return tag.replace("_", " ").replace("\\", "").replace("(", "\(").replace(")", "\)")
 
 class FindCaretFilesNode(BaseNode):
     def __init__(self):
@@ -67,6 +70,7 @@ class FindCaretFilesNode(BaseNode):
 class JoinTagsNode(BaseNode):
     def __init__(self):
         super().__init__()
+        self.set_default_input("normalize_tags", True)
         self.set_default_input("value_mode", "max")
         self.set_default_input("position", "after")
         self.set_default_input("tags1", [])
@@ -78,7 +82,8 @@ class JoinTagsNode(BaseNode):
             "tags1": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
             "tags2": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
             "value_mode": ComboAttributeDefinition(lambda: ["sum", "max", "min", "average", "replace", "skip"], allow_custom=False),
-            "position": ComboAttributeDefinition(lambda: ["before", "after", "alphabetical desc", "alphabetical asc", "value desc", "value asc"])
+            "position": ComboAttributeDefinition(lambda: ["before", "after", "alphabetical desc", "alphabetical asc", "value desc", "value asc"]),
+            "normalize_tags": BoolenAttributeDefinition()
         }
     
     @property
@@ -100,13 +105,18 @@ class JoinTagsNode(BaseNode):
             tags_list1 = kwargs.get("tags1", [])
             tags_list2 = kwargs.get("tags2", [])
 
+            normalize_tags = kwargs.get("normalize_tags", True)
+
             if not isinstance(tags_list1, list) or not isinstance(tags_list2, list):
                 raise ValueError("Tags must be a list of dictionaries")
 
             if len(tags_list1) != len(tags_list2):
                 raise ValueError("Tags lists must have the same length")
+            
+            if normalize_tags:
+                tags_list1 = [{normalize_tag(tag): value for tag, value in tags.items()} for tags in tags_list1]
+                tags_list2 = [{normalize_tag(tag): value for tag, value in tags.items()} for tags in tags_list2]
         
-
             value_mode = kwargs.get("value_mode", "sum")
             position = kwargs.get("position", "after")
     
@@ -116,7 +126,7 @@ class JoinTagsNode(BaseNode):
             tags = zip(tags_list1, tags_list2)
 
             for tags1, tags2 in tags:
-                tags = {}
+                tags = tags2
                 for tag, value in tags1.items():
                     if tag in tags2:
                         if value_mode == "sum":
@@ -179,12 +189,9 @@ class ConvertTagsToStringNode(BaseNode):
     def category(cls) -> str:
         return "Tags"
     
-    def __normalize_tag(self, tag: str) -> str:
-            return tag.replace("_", " ").replace("(", "\(").replace(")", "\)")
-    
     def __parse_tag(self, tag: tuple[str, float], normalize = True, keep_values = True) -> str:
         if normalize:
-            tag = self.__normalize_tag(tag[0])
+            tag = normalize_tag(tag[0])
         else:
             tag = tag[0]
 
@@ -214,6 +221,76 @@ class ConvertTagsToStringNode(BaseNode):
         return {
             "tags_string": tags_string
         }
+
+class LoadTagsFromStringsNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("normalize_tags", True)
+        self.set_default_input("default_value", 1)
+        self.set_default_input("tags", [])
+
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "tags": ListAttributeDefinition(StringAttributeDefinition()),
+            "normalize_tags": BoolenAttributeDefinition(),
+            "default_value": FloatAttributeDefinition()
+        }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition()))
+        }
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Load Tags From Strings"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Tags"
+    
+
+    def __parse_tag(self, tag: str, default_value = 1.0) -> tuple[str, float]:
+
+        tag = tag.strip()
+
+        if not tag.startswith("(") or not tag.endswith(")"):
+            return tag, default_value
+        
+        # drop '(' and ')' if are present
+        while tag.startswith("(") and tag.endswith(")"):
+            tag = tag[1:-1]
+            default_value *= 1.2
+
+        # if ends with :float_str, extract the float and use it as value
+        if tag.endswith(":"):
+            return normalize_tag(tag[:-1]), default_value
+        
+        if ":" in tag:
+            tag, value = tag.split(":")
+            try:
+                value = float(value)
+            except ValueError:
+                value = default_value
+
+            return tag, normalize_tag(value)
+    
+    def run(self, **kwargs) -> dict[str, object]:
+
+        tag_strings = kwargs.get("tags", [])
+        result_tags = []
+        for tag_string in tag_strings:
+            if not isinstance(tag_string, str):
+                raise ValueError("Tags must be a list of strings")
+            tags = [self.__parse_tag(tag, kwargs.get("default_value", 1.0)) for tag in tag_string.split(",")]
+            result_tags.append(dict(tags))
+
+        return {
+            "tags": result_tags
+        }
+
 
 class LoadTagsFromFilesNode(BaseNode):
     def __init__(self):
@@ -247,11 +324,6 @@ class LoadTagsFromFilesNode(BaseNode):
     def category(cls) -> str:
         return "Tags"
     
-    def __normalize_tag(self, tag: str) -> str:
-        if self.static_inputs["normalize_tags"]:
-            return tag.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        return tag
-
 
     def __parse_tag(self, tag: str, default_value = 1.0) -> tuple[str, float]:
 
@@ -267,7 +339,7 @@ class LoadTagsFromFilesNode(BaseNode):
 
         # if ends with :float_str, extract the float and use it as value
         if tag.endswith(":"):
-            return self.__normalize_tag(tag[:-1]), default_value
+            return normalize_tag(tag[:-1]), default_value
         
         if ":" in tag:
             tag, value = tag.split(":")
@@ -276,8 +348,12 @@ class LoadTagsFromFilesNode(BaseNode):
             except ValueError:
                 value = default_value
 
-            return tag, self.__normalize_tag(value)
+            return tag, normalize_tag(value)
     
+    def show_custom_ui(self, parent: int | str):
+        dpg.add_text("<deprecated> Use Load Tags From Strings instead")
+        return super().show_custom_ui(parent)
+
     def run(self, **kwargs) -> dict[str, object]:
 
         files = kwargs.get("files", [])
@@ -315,7 +391,67 @@ class LoadTagsFromFilesNode(BaseNode):
             "files": other_files,
             "tags": files_tags
         }
-                
+
+class FilterTagsByValueNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("tag_value", 0)
+        self.set_default_input("filter_mode", "less")
+
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
+            "tag_value": FloatAttributeDefinition(),
+            "filter_mode": ComboAttributeDefinition(lambda: ["greater", "less", "equal", "not equal"], allow_custom=False)
+        }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "remaining_tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
+            "filtered_tags": ListAttributeDefinition(DictAttributeDefinition(key_type=StringAttributeDefinition(), value_type=FloatAttributeDefinition())),
+        }
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Filter Tags By Value"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Tags"
+    
+    def run(self, **kwargs) -> dict[str, object]:
+        tags_list = kwargs.get("tags", [])
+        filter_mode = kwargs.get("filter_mode", "less")
+
+        remaining_tags_list = []
+        filtered_tags_list = []
+
+        for tags in tags_list:
+            filtered_tags = {}
+            remaining_tags = {}
+            for tag, value in tags.items():
+                if filter_mode == "greater" and value > kwargs.get("tag_value", 0):
+                    filtered_tags[tag] = value
+                elif filter_mode == "less" and value < kwargs.get("tag_value", 0):
+                    filtered_tags[tag] = value
+                elif filter_mode == "equal" and value == kwargs.get("tag_value", 0):
+                    filtered_tags[tag] = value
+                elif filter_mode == "not equal" and value != kwargs.get("tag_value", 0):
+                    filtered_tags[tag] = value
+                else:
+                    remaining_tags[tag] = value
+
+            remaining_tags_list.append(remaining_tags)
+            filtered_tags_list.append(filtered_tags)
+
+        return {
+            "remaining_tags": remaining_tags_list,
+            "filtered_tags": filtered_tags_list
+        }
+
+                    
 
 class FilterFilesByTagNode(BaseNode):
     def __init__(self):

@@ -1,4 +1,4 @@
-from .graph_node import GraphNode
+from .graph_node import GraphNode, GraphInputNode, GraphOutputNode
 
 def register_nodes():
-    return [GraphNode]
+    return [GraphNode, GraphInputNode, GraphOutputNode]

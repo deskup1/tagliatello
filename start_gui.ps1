@@ -32,7 +32,24 @@ if (-not (Test-Path $venv)) {
     Write-Host "Installation completed! Starting the application..."
     python main.py
 } else {
-    Write-Host "Virtual environment already exists. Starting the application..."
+
+    Write-Host "Virtual environment already exists."
     .\venv\Scripts\Activate.ps1
-    python main.py
+
+    # load text file app-data.yaml
+    $appData = Get-Content -Path "app-data.yaml"
+
+    $lastVersion = $appData | Select-String -Pattern "version:" | ForEach-Object { $_ -replace "version: ", "" }
+    
+    # if version is different than last version, run pip install -r requirements.txt
+    if ($version -ne $lastVersion) {
+        Write-Host "New version detected. Updating the application..."
+        pip install -r requirements.txt
+        Write-Host "Application updated. Starting the application..."
+        python main.py
+    } else {
+        Write-Host "Application is up to date. Starting the application..."
+        python main.py
+    }
+
 }

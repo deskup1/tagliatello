@@ -34,8 +34,6 @@ dpg.configure_app(manual_callback_management=DEBUG)
 def exception_full_message(e):
     if not isinstance(e, Exception):
         return str(e)
-    elif isinstance(e, GraphException) or isinstance(e, ValueError):
-        return f"{e}"
     try:
         raise e
     except Exception as e:
@@ -929,7 +927,6 @@ class GuiGraph:
         for node_name in new_nodes_names:
             config = dpg.get_item_configuration(node_name)
             dpg.is_item_clicked
-            print(config)
        
         dpg.hide_item("selection_menu")
 

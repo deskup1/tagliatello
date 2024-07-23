@@ -4,7 +4,7 @@ from ...graph import BaseNode, StringAttributeDefinition, IntegerAttributeDefini
 import dearpygui.dearpygui as dpg
 import time
 import requests
-
+import json
 
 class DanbooruWikiNode(BaseNode):
 
@@ -23,39 +23,30 @@ class DanbooruWikiNode(BaseNode):
     @property
     def output_definitions(self):
         return {
+            "tag": StringAttributeDefinition(),
             "wiki": StringAttributeDefinition()
         }
     
     def __danbooru_get_wiki(self, tag: str, retry: int = 3):
-        tag = tag.strip().replace(" ", "_")
+        tag = tag.strip().replace(" ", "_").replace("\\", "")
         
+        body = None
         for _ in range(retry):
-            tags = requests.get(f"https://danbooru.donmai.us/tags.json?search%5Bname_matches%5D={tag}")
-            if tags.status_code == 200:
+            url = f"https://danbooru.donmai.us/wiki_pages/{str(tag)}.json"
+            wiki = requests.get(url)
+            if wiki.status_code != 200:
                 break
-        else:
-            return ""
-        
-        tags = tags.json()
-        if len(tags) == 0:
-            return ""
-        
-        tag: dict = tags[0]
+            try:
+                content = wiki.content.decode("utf-8")
+                body = json.loads(content)["body"]  
+            except Exception as e:
+                print(e)
+                continue
 
-        for _ in range(retry):
-            wiki = requests.get(f"https://danbooru.donmai.us/wiki_pages/{str(tag['name'])}.json")
-            if wiki.status_code == 200:
-                break
-        else:
-            return ""
-        
-        body = wiki.json().get("body")
         if body is None:
             return ""
         
         return body
-    
-
     
     @staticmethod
     def name():
@@ -70,5 +61,6 @@ class DanbooruWikiNode(BaseNode):
         retry = kwargs["retry"]
         wiki = self.__danbooru_get_wiki(tag, retry)
         return {
+            "tag": tag,
             "wiki": wiki
         }

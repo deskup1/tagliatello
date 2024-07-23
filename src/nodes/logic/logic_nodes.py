@@ -75,7 +75,8 @@ class IfElseNode(BaseNode):
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
             "condition": BoolenAttributeDefinition(),
-            "input": AnyAttributeDefinition()
+            "true": AnyAttributeDefinition(),
+            "false": AnyAttributeDefinition()
         }
     
     @property
@@ -92,12 +93,13 @@ class IfElseNode(BaseNode):
     
     def run(self, **kwargs) -> dict:
         condition = kwargs.get("condition", False)
-        input = kwargs.get("input")
+        true = kwargs.get("true")
+        false = kwargs.get("false")
 
         if condition:
-            return {"true": input, "false": BaseNode.GeneratorExit()}
+            return {"true": true, "false": BaseNode.GeneratorExit()}
         else:
-            return {"false": input, "true": BaseNode.GeneratorExit()}
+            return {"false": false, "true": BaseNode.GeneratorExit()}
         
 class IsNullNode(BaseNode):
     def __init__(self):
@@ -416,7 +418,7 @@ class ReplaceNode(BaseNode):
     def __init__(self):
         super().__init__()
         self.set_default_input("input", "")
-        self.set_default_input("replace", "")
+        self.set_default_input("trigger", "")
 
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
@@ -440,5 +442,76 @@ class ReplaceNode(BaseNode):
         return "Logic"
     
     def run(self, **kwargs) -> dict:
-        replace = kwargs.get("replace")
-        return {"out": replace}
+        replace = kwargs.get("input")
+        return {"input": replace}
+
+
+class WaitForAllInputs(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self._input_definitions = {}
+        self._output_definitions = {}
+
+        self._on_input_connected += self.__on_input_connected
+        self._on_input_disconnected += self.__on_input_disconnected
+
+    def __on_input_connected(self, input_name: str, output_node: BaseNode, output_name: str):
+        attribute_type = output_node.output_definitions[output_name].copy()       
+        self._input_definitions[input_name] = AnyAttributeDefinition()
+        self._output_definitions[input_name] = attribute_type
+        self._output_definitions[input_name].kind = AttributeKind.VALUE
+        self.refresh_ui()
+
+    def __on_input_disconnected(self, input_name: str, output_node: BaseNode, output_name: str):
+        if input_name in self._input_definitions:
+            self._input_definitions[input_name] = AnyAttributeDefinition()
+            self._output_definitions[input_name] = AnyAttributeDefinition()
+            self.refresh_ui()
+        
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        inputs_count = self.static_inputs.get("count", 2)
+        if len(self._input_definitions) < inputs_count:
+            for i in range(len(self._input_definitions), inputs_count):
+                self._input_definitions[f"in{i}"] = AnyAttributeDefinition()
+        elif len(self._input_definitions) > inputs_count:
+            for i in range(inputs_count, len(self._input_definitions)):
+                del self._input_definitions[f"in{i}"]
+        return self._input_definitions
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        outputs_count = self.static_inputs.get("count", 2)
+        if len(self._output_definitions) < outputs_count:
+            for i in range(len(self._output_definitions), outputs_count):
+                self._output_definitions[f"in{i}"] = AnyAttributeDefinition()
+        elif len(self._output_definitions) > outputs_count:
+            for i in range(outputs_count, len(self._output_definitions)):
+                del self._output_definitions[f"in{i}"]
+        return self._output_definitions
+
+    @classmethod
+    def name(cls) -> str:
+        return "Wait For All Inputs"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Logic"
+    
+    def __on_count_changed(self, sender, app_data):
+        self.set_static_input("count", app_data)
+        self.refresh_ui()
+    
+    def show_custom_ui(self, parent: int | str):
+        super().show_custom_ui(parent)
+        dpg.add_input_int(label="Count", 
+                          default_value=self.static_inputs.get("count", 2), 
+                          min_value=2, 
+                          min_clamped=True, 
+                          max_value=16, 
+                          max_clamped=True, 
+                          callback=self.__on_count_changed, 
+                          width=DPG_DEFAULT_INPUT_WIDTH)
+        
+    def run(self, **kwargs) -> dict:
+        return kwargs

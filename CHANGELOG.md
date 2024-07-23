@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.9-alpha
+
+### Features
+- Added nodes for downloading images from booru websites
+- Added node for Ollama API
+- Added node for vector storage
+- Improved support for Graph nodes
+- Added more miscellenous nodes (`FlattenList`,`LoadTextFileNode`,`JoinList`)
+
+### Bug Fixes
+- Fixed issue with `Display` node showing stretched images
+
 ## v0.0.8-alpha
 
 ### Features

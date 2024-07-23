@@ -42,5 +42,6 @@ transformers
 openai
 packaging
 timm
-
-
+ollama
+booru
+chromadb==0.5.3

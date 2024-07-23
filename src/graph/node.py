@@ -223,8 +223,9 @@ class FloatAttributeDefinition(AttributeDefinition):
                 dpg.hide_item(input)
         
 class StringAttributeDefinition(AttributeDefinition):
-    def __init__(self, kind: AttributeKind = AttributeKind.VALUE):
-        super().__init__(type_name="str", kind=kind)
+    def __init__(self, kind: AttributeKind = AttributeKind.VALUE, optional: bool = False, large: bool = False):
+        super().__init__(type_name="str", kind=kind, optional=optional)
+        self.large = large
 
     def _format_input(self, input):
         return input
@@ -242,7 +243,10 @@ class StringAttributeDefinition(AttributeDefinition):
         default_value = self._format_output(default_value)
 
         with dpg.group(horizontal=True, parent=parent) as group:
-            input = dpg.add_input_text(width=DPG_DEFAULT_INPUT_WIDTH, callback=on_input, default_value=default_value)
+            if self.large:
+                input = dpg.add_input_text(multiline=True, width=DPG_DEFAULT_INPUT_WIDTH*3, height=DPG_DEFAULT_INPUT_WIDTH*0.666, callback=on_input, default_value=default_value)
+            else:
+                input = dpg.add_input_text(width=DPG_DEFAULT_INPUT_WIDTH, callback=on_input, default_value=default_value)
             dpg.add_text(f"{attribute_name}:{self}")
 
         if dpg_type == dpg.mvNode_Attr_Input:
@@ -269,7 +273,6 @@ class FileAttributeDefinition(AttributeDefinition):
 
   
     def _on_file_select(self, sender, app_data, user_data):
-        print(app_data)
         selections: str = app_data.get("selections", "")
         # iterate over selections dict, get first value
         file_path_name = ""

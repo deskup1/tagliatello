@@ -12,7 +12,9 @@ import os
 default_thumbnail_size = (150, 150)
 
 
-def pillow_from_any_string(image: str) -> PIL.Image.Image | None:
+def pillow_from_any_string(image: str|None) -> PIL.Image.Image | None:
+    if image is None or image == "":
+        return None
     if image.startswith("data:image"):
         return convert_base64_to_pil(image)
     elif image.startswith("http"):
@@ -35,6 +37,10 @@ def convert_base64_to_pil(base64_image: str) -> PIL.Image.Image:
     base64_image = base64.b64decode(base64_image)
     return Image.open(BytesIO(base64_image))
 
+def convert_pil_to_base64(pil_image: PIL.Image.Image) -> str:
+    cv_image = convert_pil_to_cv(pil_image)
+    _, buffer = cv2.imencode(".png", cv_image)
+    return "data:image/png;base64," + base64.b64encode(buffer).decode()
 
 def convert_to_thumbnail(pillow_image: PIL.Image.Image, size=default_thumbnail_size) -> PIL.Image.Image:
     

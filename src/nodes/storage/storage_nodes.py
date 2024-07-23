@@ -1,6 +1,6 @@
 from typing import Any
 import os
-from ...graph import BaseNode, StringAttributeDefinition, AttributeDefinition, AttributeKind
+from ...graph import BaseNode, StringAttributeDefinition, AttributeDefinition, FileAttributeDefinition
 
 
 class SetStorageItem(BaseNode):
@@ -73,7 +73,12 @@ class GetStorageItem(BaseNode):
             "value": StringAttributeDefinition(),
         }
     
-    def run(self, storage, key):
+    def run(self, **kwargs):
+        storage = kwargs.get("storage")
+        key = kwargs.get("key")
+        value = storage.get(key)
         return {
-            "value": storage[key]
+            "storage": storage,
+            "key": key,
+            "value": value
         }

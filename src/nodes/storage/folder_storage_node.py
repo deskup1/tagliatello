@@ -1,36 +1,71 @@
 
 from typing import Any
 import os
-from ...graph import BaseNode, StringAttributeDefinition, AttributeDefinition, ComboAttributeDefinition
+from ...graph import BaseNode, StringAttributeDefinition, AttributeDefinition, FileAttributeDefinition
 
 
 class FolderStorage:
 
-    def __init__(self, path, extension=".txt"):
-        self.path = path
+    def __init__(self, storage_path, extension=".txt"):
         self.extension = extension
+        self.storage_path = storage_path
 
-        if self.extension is None:
-            self.extension = ""
-        elif self.extension != "" and not self.extension.startswith("."):
-            self.extension = f".{self.extension}"
+        if extension!= None and len(extension) > 0 and extension[0] != ".":
+            self.extension = f".{extension}"
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def get(self, name: str) -> Any:
+        return self.__getitem__(name)
+    
+    def set(self, name: str, value: Any) -> None:
+        self.__setitem__(name, value)
+
+    def all_keys(self):
+        listdir = os.listdir(self.storage_path)
+        keys = []
+        for file in listdir:
+            if file.endswith(self.extension):
+                key = file.replace(self.extension, "")
+                key = key.encode("utf-8","ignore").decode("ascii")
+                key = key.replace("\\", "")
+                key = key.replace("/", "")
+                key = key.replace(":", "[colon]")
+                key = key.replace("*", "[star]")
+                key = key.replace("?", "[question]")
+                keys.append(key)
+
+        return keys
+
+        
+    def __setitem__(self, name: str, value: Any) -> None:
         try:
-            os.makedirs(self.path, exist_ok=True)
-            with open(f"{self.path}/{name}{self.extension}", "w") as f:
+            os.makedirs(self.storage_path, exist_ok=True)
+
+            name = name.encode("ascii","ignore").decode("utf-8")
+            name = name.replace("\\", "")
+            name = name.replace("/", "")
+            name = name.replace(":", "[colon]")
+            name = name.replace("*", "[star]")
+            name = name.replace("?", "[question]")
+
+            with open(f"{self.storage_path}/{name}{self.extension}", "w") as f:
                 f.write(str(value))
         except Exception as e:
             raise ValueError(f"Failed to save value to file: {e}")
 
-    def __getattr__(self, name: str) -> Any:
+    def __getitem__(self, name: str) -> Any:
+
+
+        name=name.encode("ascii","ignore").decode("utf-8")
+        name = name.replace("\\", "")
+        name = name.replace("/", "")
+
         # check if file exists
-        if not os.path.exists(f"{self.path}/{name}{self.extension}"):
+        if not os.path.exists(f"{self.storage_path}/{name}{self.extension}"):
             return None
 
         # read value from file
         try:
-            with open(f"{self.path}/{name}{self.extension}", "r") as f:
+            with open(f"{self.storage_path}/{name}{self.extension}", "r") as f:
                 return f.read()
         except FileNotFoundError:
             return None
@@ -57,7 +92,7 @@ class FolderStorageNode(BaseNode):
     @property
     def static_input_definitions(self):
         return {
-            "path": StringAttributeDefinition(),
+            "path": FileAttributeDefinition(directory_selector=True),
             "extension": StringAttributeDefinition()
         }
     
@@ -68,10 +103,10 @@ class FolderStorageNode(BaseNode):
         }
     
     def init(self):
+        super().init()
         path = self.static_inputs["path"]
         extension = self.static_inputs["extension"]
         self.storage = FolderStorage(path, extension)
-        return super().init()
     
     def run(self, **kwargs):
         return {

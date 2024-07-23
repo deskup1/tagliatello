@@ -20,7 +20,8 @@ try {
     # check if virtual environment folder is not present
     $venv = "venv"
     if (-not (Test-Path $venv)) {
-        throw "Virtual environment not found. Please run the installation script first. (start_gui.ps1)"
+        Write-Host "Creating virtual environment..."
+        python -m venv $venv
     }
 } catch {
     Write-Host $_

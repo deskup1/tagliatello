@@ -1,4 +1,4 @@
-from ...graph import BaseNode, AttributeDefinition, AttributeKind, AnyAttributeDefinition, FloatAttributeDefinition, MultipleAttributeDefinition, StringAttributeDefinition, ListAttributeDefinition, IntegerAttributeDefinition
+from ...graph import BaseNode, AttributeDefinition, AttributeKind, AnyAttributeDefinition, FloatAttributeDefinition, MultipleAttributeDefinition, StringAttributeDefinition, ListAttributeDefinition, IntegerAttributeDefinition, DPG_DEFAULT_INPUT_WIDTH
 from ...helpers import pillow_from_any_string
 import src.helpers as helpers
 
@@ -323,6 +323,8 @@ class DisplayText(BaseNode):
     def show_custom_ui(self, parent: int | str):
         super().show_custom_ui(parent)
         self.text_id = dpg.add_text("<----------------Text-to-display----------------->", parent=parent)
+        # copy to clipboard
+        dpg.add_button(label="Copy to clipboard", callback=lambda: dpg.set_clipboard_text(dpg.get_value(self.text_id)))
 
     def refresh_ui(self):
         if self.text_id is not None and dpg.does_item_exist(self.text_id):
@@ -330,16 +332,16 @@ class DisplayText(BaseNode):
         return super().refresh_ui()
     
     def run(self, **kwargs) -> dict:
-        input = kwargs["in"]
+        input = kwargs.get("in")
         text = str(input)
 
         # wrap text to 50 characters
         text = textwrap.fill(text, 50)
 
         if self.text_id is not None and dpg.does_item_exist(self.text_id):
-            # resize to up to 500 characters
-            text = text[:497]
-            if len(text) > 496:
+            # resize to up to 1000 characters
+            text = text[:9997]
+            if len(text) > 9996:
                 text += "..."
             dpg.set_value(self.text_id, text)
         
@@ -450,6 +452,9 @@ class DisplayImage(BaseNode):
 
         dpg.show_item(self.image_id)
 
+        if len(images) > 16:
+            images = images[:16]
+
         result_images = []
         for image in images:
             try:
@@ -511,7 +516,9 @@ class ImageThumbnail(BaseNode):
         max_width = kwargs["max_width"]
         max_height = kwargs["max_height"]
 
-        if isinstance(image, str):
+        if image is None:
+            return {"image": None}
+        elif isinstance(image, str):
             image = pillow_from_any_string(image)
         elif isinstance(image, Image.Image):
             image = image
@@ -692,3 +699,121 @@ class DrawBbox(BaseNode):
             result_images.append(self.__draw_bbox(images[i], bboxes[i], labels[i]))
 
         return {"images": result_images, "bboxes": bboxes, "labels": labels}
+    
+
+class SetVariable(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("name", "")
+        self.set_default_input("value", "")
+
+    VARIABLES = {}
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "name": StringAttributeDefinition(),
+            "value": AnyAttributeDefinition()
+        }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "name": StringAttributeDefinition(),
+            "value": AnyAttributeDefinition()
+        }
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Set Variable"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Misceallaneous"
+    
+    def run(self, **kwargs) -> dict:
+        name = kwargs["name"]
+        value = kwargs["value"]
+        self.VARIABLES[name] = value
+        return {"name": name, "value": value}
+    
+
+class GetVariable(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("name", "")
+
+    VARIABLES = {}
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "name": StringAttributeDefinition()
+        }
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {
+            "name": StringAttributeDefinition(),
+            "value": AnyAttributeDefinition()
+        }
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Get Variable"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Misceallaneous"
+    
+    def run(self, **kwargs) -> dict:
+        name = kwargs["name"]
+        value = self.VARIABLES.get(name, None)
+        return {"name": name, "value": value}
+    
+
+class ButtonsNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+        self.set_default_input("in", None)
+
+        self.clicked_button: str = None
+    
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"in": AnyAttributeDefinition()}
+    
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"out0": AnyAttributeDefinition(kind = AttributeKind.EVENT), 
+                "out1": AnyAttributeDefinition(kind = AttributeKind.EVENT)}
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Buttons"
+    
+    @classmethod
+    def category(cls) -> str:
+        return "Misceallaneous"
+    
+    def __on_button_click(self, button: str):
+        self.clicked_button = button
+    
+    def show_custom_ui(self, parent: int | str):
+        dpg.add_button(label="out0", callback=lambda: self.__on_button_click("out0"), width=DPG_DEFAULT_INPUT_WIDTH, height=30, parent=parent)
+        dpg.add_button(label="out1", callback=lambda: self.__on_button_click("out1"), width=DPG_DEFAULT_INPUT_WIDTH, height=30, parent=parent)
+
+    def run(self, **kwargs) -> dict:
+        input = kwargs.get("in")
+
+        while self.clicked_button is None:
+            time.sleep(0.5)
+
+        result = {
+            "out0": input if self.clicked_button == "out0" else BaseNode.GeneratorExit(),
+            "out1": input if self.clicked_button == "out1" else BaseNode.GeneratorExit()
+        }
+
+        self.clicked_button = None
+
+        return result

@@ -7,8 +7,11 @@ from ...graph import (
     FileAttributeDefinition,
     MultiFileAttributeDefinition,
     BoolenAttributeDefinition,
-    ListAttributeDefinition
+    ListAttributeDefinition,
+    MultipleAttributeDefinition
 )
+
+from ...helpers import pillow_from_any_string, convert_pil_to_base64
 
 import os
 import cv2
@@ -61,7 +64,7 @@ class StringNode(BaseNode):
 
     @property
     def output_definitions(self) -> dict[str, AttributeDefinition]:
-        return {"out": StringAttributeDefinition()}
+        return {"out": StringAttributeDefinition(large=True)}
     
     @classmethod
     def name(cls) -> str:
@@ -322,7 +325,10 @@ class Base64ImageNode(BaseNode):
     @property
     def input_definitions(self) -> dict[str, AttributeDefinition]:
         return {
-            "path": FileAttributeDefinition(allowed_extensions=["Images (*.png *.jpg *.jpeg *.bmp *.tiff *.webp *.ico){.png,.jpg,.jpeg,.bmp,.tiff,.webp,.ico}", ".*"]),
+            "image":  MultipleAttributeDefinition( types = [
+                FileAttributeDefinition(allowed_extensions=["Images (*.png *.jpg *.jpeg *.bmp *.tiff *.webp *.ico){.png,.jpg,.jpeg,.bmp,.tiff,.webp,.ico}", ".*"]),
+                AttributeDefinition(type_name="image")
+            ]),
             "max_width": IntegerAttributeDefinition(min_value=1),
             "max_height": IntegerAttributeDefinition(min_value=1)
             }
@@ -343,27 +349,18 @@ class Base64ImageNode(BaseNode):
     def run(self, **kwargs) -> dict:
         
         # load image
-        path = kwargs["path"]
+        image = kwargs["image"]
+
         max_width = kwargs["max_width"]
         max_height = kwargs["max_height"]
 
-        if not os.path.exists(path):
-            raise ValueError(f"File {path} does not exist")
-        
-        image = cv2.imread(path)
+        image = pillow_from_any_string(image)
         if image is None:
-            raise ValueError(f"Failed to load image {path}")
-        
-        # resize image
-        height, width = image.shape[:2]
-        if height > max_height or width > max_width:
-            scale = min(max_width / width, max_height / height)
-            image = cv2.resize(image, (0, 0), fx=scale, fy=scale)
+            return {"image": None}
 
-        # encode image to base64
-        _, buffer = cv2.imencode(".png", image)
-        image_base64 = base64.b64encode(buffer).decode("utf-8")
 
-        image_base64 = f"data:image/png;base64,{image_base64}"
+        image.thumbnail((max_width, max_height))
+
+        # convert image to base64
+        image_base64 = convert_pil_to_base64(image)
         return {"image": image_base64}
-

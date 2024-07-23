@@ -1,5 +1,5 @@
-from .miscellaneous_nodes import DisplayNode, WaitNode, DisplayText, DisplayImage, DrawBbox, ImagesThumbnail, ImageThumbnail
-from .file_nodes import CopyFileNode, MoveFileNode, SaveToImageFileNode, CopyFilesNode, MoveFilesNode, SaveToTextFileNode, SaveToTextFilesNode
+from .miscellaneous_nodes import DisplayNode, WaitNode, DisplayText, DisplayImage, DrawBbox, ImagesThumbnail, ImageThumbnail, SetVariable, GetVariable, ButtonsNode
+from .file_nodes import CopyFileNode, MoveFileNode, SaveToImageFileNode, CopyFilesNode, MoveFilesNode, SaveToTextFileNode, SaveToTextFilesNode, LoadTextFileNode, LoadTextFilesNode
 
 def register_nodes():
     return [
@@ -16,5 +16,10 @@ def register_nodes():
         DisplayImage,
         DrawBbox,
         ImagesThumbnail,
-        ImageThumbnail
+        ImageThumbnail,
+        SetVariable,
+        GetVariable,
+        ButtonsNode,
+        LoadTextFilesNode,
+        LoadTextFileNode,
         ]

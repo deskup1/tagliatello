@@ -269,3 +269,59 @@ class CopyFilesNode(ProgressNode):
 
         return {"destination": files}
 
+class LoadTextFileNode(BaseNode):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"path": FileAttributeDefinition()}
+
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return { "text" : StringAttributeDefinition() }
+
+    @classmethod
+    def name(cls) -> str:
+        return "Load Text File"
+
+    @classmethod
+    def category(cls) -> str:
+        return "File"
+
+    def run(self, **kwargs) -> dict:
+        path = kwargs["path"]
+        with open(path, "r") as f:
+            text = f.read()
+        return {"text": text}
+    
+class LoadTextFilesNode(ProgressNode):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def input_definitions(self) -> dict[str, AttributeDefinition]:
+        return {"paths": MultiFileAttributeDefinition()}
+
+    @property
+    def output_definitions(self) -> dict[str, AttributeDefinition]:
+        return { "texts" : ListAttributeDefinition(StringAttributeDefinition()) }
+
+    @classmethod
+    def name(cls) -> str:
+        return "Load Text Files"
+
+    @classmethod
+    def category(cls) -> str:
+        return "File"
+
+    def run(self, **kwargs) -> dict:
+        paths = kwargs["paths"]
+        texts = []
+        for i in range(len(paths)):
+            self.set_progress(i, len(paths))
+            with open(paths[i], "r") as f:
+                text = f.read()
+            texts.append(text)
+        self.set_progress(len(paths), len(paths))
+        return {"texts": texts}

@@ -116,7 +116,4 @@ if __name__ == "__main__":
     image = Image.open("screenshots/screenshot1.png")
     result = model.run(images=[image,image], task_prompt="<CAPTION>")
 
-    for i, result in enumerate(result):
-        print(f"Result {i}: {result}")
-
     model.unload_model()

@@ -12,6 +12,7 @@ import os
 import importlib
 import queue
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 class GraphException(Exception):
     def __init__(self, message: str):
@@ -66,7 +67,8 @@ class Graph:
         self.__nodes_with_unfinished_generator_outputs = set()
 
         self.__running = False
-        self.__main_process = None
+
+        self.__thread_executor = ThreadPoolExecutor()
 
 
     def is_running(self) -> bool:
@@ -246,21 +248,18 @@ class Graph:
             self.remove_connection(connection)
 
     def remove_output_connection_for_node(self, node: BaseNode|str, output_name: str):
-        print(f"Removing output connection for node: {node}")
         node_name = node if isinstance(node, str) else self.get_node_name(node)
         connections_to_remove = [connection for connection in self.get_output_connections_for_node(node_name) if connection.output_name == output_name]
         for connection in connections_to_remove:
             self.remove_connection(connection)
 
     def remove_input_connection_for_node(self, node: BaseNode|str, input_name: str):
-        print(f"Removing input connection for node: {node}")
         node_name = node if isinstance(node, str) else self.get_node_name(node)
         connections_to_remove = [connection for connection in self.get_input_connections_for_node(node_name) if connection.input_name == input_name]
         for connection in connections_to_remove:
             self.remove_connection(connection)
 
     def remove_node(self, node: BaseNode|str):
-        print(f"Removing node: {node}")
         node_name = node if isinstance(node, str) else self.get_node_name(node)
         self.remove_connections_for_node(node_name)
         self.on_node_removed.trigger(node)
@@ -359,6 +358,24 @@ class Graph:
                 else:
                     self.__mark_loop_as_finished(input_node)
 
+    def __mark_loop_as_unfinished(self, node: BaseNode, remove_results: bool = False):
+        name = self.get_node_name(node)
+        if name in self._run_results and remove_results:
+            del self._run_results[name]
+
+        # get output connections
+        output_connections = self.get_output_connections_for_node(node)
+
+        for connection in output_connections:
+            input_node = self.get_node_by_name(connection.input_node_name)
+            if connection.input_name in input_node.input_definitions:
+                definition = input_node.input_definitions[connection.input_name]
+                if definition.kind == AttributeKind.GENERATOR:
+                    if connection.input_node_name not in self.__nodes_with_unfinished_generator_inputs:
+                        self.__mark_loop_as_unfinished(input_node, True)
+                else:
+                    self.__mark_loop_as_unfinished(input_node, True)
+
     def __run_node(self, node: BaseNode, inputs_override: dict[str, any] = {}):
         
        
@@ -376,9 +393,7 @@ class Graph:
             output_data = self._run_results.get(connection.output_node_name, {}).get(connection.output_name, BaseNode.GeneratorExit())
             input_data[connection.input_name] = output_data
 
-
         input_data.update(inputs_override)
-        print(input_data)
 
         # run node
         result = node.run(**input_data)
@@ -389,6 +404,7 @@ class Graph:
                 output_result = result[name]
                 if output_result != BaseNode.GeneratorExit():
                     self.__nodes_with_unfinished_generator_outputs.add(node_name)
+                    self.__mark_loop_as_unfinished(node)
                 elif node_name in self.__nodes_with_unfinished_generator_outputs:
                     self.__nodes_with_unfinished_generator_outputs.remove(node_name)
                     self.__mark_loop_as_finished(node)
@@ -493,6 +509,8 @@ class Graph:
                 scheduled_nodes.add(input_node)
                 if input_node_name not in nodes_priority:
                     nodes_priority[input_node_name] = iteration_counter
+                else:
+                    nodes_priority[input_node_name] = max(nodes_priority[input_node_name], iteration_counter)
 
             if run_queue.qsize() == 0:
                 # sort nodes by priority descending
@@ -524,15 +542,14 @@ class Graph:
         if self.__running:
             raise GraphException("Graph is already running")
         
-        if self.__main_process is not None:
-            if self.__main_process.is_alive():
-                raise GraphException("Graph is already running")
+        if self.__thread_executor._work_queue.qsize() > 0:
+            raise GraphException("Graph is already running")
             
         self._run_results = {}
         self.__nodes_with_unfinished_generator_inputs = set()
         self.__nodes_with_unfinished_generator_outputs = set()
         self.__running = True
-        # self.__main_process = multiprocessing.Process(target=self.__run)
+
 
         def run():
             try:
@@ -547,16 +564,10 @@ class Graph:
                 self.__nodes_with_unfinished_generator_inputs = set()
                 self.__nodes_with_unfinished_generator_outputs = set()
 
-        self.__main_process = threading.Thread(target=run)
-        self.__main_process.start()
+        self.__thread_executor.submit(run)
 
     def stop(self):
         if not self.__running:
             return
         
         self.__running = False
-
-    def kill(self):
-        if self.__main_process is not None:
-            self.__main_process.terminate()
-            self.__main_process = None 

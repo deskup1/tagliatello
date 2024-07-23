@@ -39,7 +39,7 @@ class OpenAIChatModel:
                 {
                     "type": "image_url",
                     "image_url": {
-                        "url": message.image,
+                        "url": message.base64_image,
                     }
                 }
             )
@@ -88,8 +88,6 @@ class OpenAIChatModel:
             if content == None:
                 content = " "
             response_message += content
-
-        print(response_message)
 
         return LlmChatMessage(
             role="assistant",
